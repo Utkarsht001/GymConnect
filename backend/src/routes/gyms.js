@@ -219,7 +219,7 @@ router.post('/', verifyToken, requireRole(['GYM_OWNER']), async (req, res) => {
         logo: logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300',
         coverImage: coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200',
         openingHours: openingHours || '06:00 AM - 10:00 PM',
-        freeTrialDays: freeTrialDays !== undefined ? parseInt(freeTrialDays) : 3,
+        trialMonths: freeTrialDays !== undefined ? Math.max(1, parseInt(freeTrialDays)) : 3,
         isApproved: true, // Direct approval on registration as requested
       }
     });
@@ -251,7 +251,7 @@ router.put('/:id', verifyToken, requireOwnerOfGym, async (req, res) => {
         logo,
         coverImage,
         openingHours,
-        freeTrialDays: freeTrialDays !== undefined ? parseInt(freeTrialDays) : undefined
+        trialMonths: freeTrialDays !== undefined ? Math.max(1, parseInt(freeTrialDays)) : undefined
       }
     });
 
