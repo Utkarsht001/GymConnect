@@ -350,7 +350,7 @@ export const DashboardOwner: React.FC = () => {
       return;
     }
     fetchDashboardData();
-  }, [user]);
+  }, [user?.id]);
 
   // Leaflet coordinates picker logic
   useEffect(() => {
@@ -428,7 +428,10 @@ export const DashboardOwner: React.FC = () => {
   };
 
   const handleFacilitiesUpdate = async () => {
-    if (!gym) return;
+    if (!gym) {
+      alert('Please create your Gym Profile first in the "My Gym Setup" tab before saving facilities.');
+      return;
+    }
     try {
       await apiFetch(`/api/gyms/${gym.id}/facilities`, {
         method: 'POST',
@@ -953,11 +956,29 @@ export const DashboardOwner: React.FC = () => {
                       key={fac.id}
                       onClick={() => toggleFacilitySelection(fac.id)}
                       className={`facility-select-item glass-card ${isChecked ? 'selected' : ''}`}
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      role="checkbox"
+                      aria-checked={isChecked}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                          toggleFacilitySelection(fac.id);
+                        }
+                      }}
                     >
+                      <input 
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // Controlled by div onClick
+                        style={{ display: 'none' }}
+                      />
                       <span className="checkbox-box flex-center">
-                        {isChecked && <Check size={14} />}
+                        {isChecked && <Check size={14} strokeWidth={3} />}
                       </span>
-                      <span>{fac.name}</span>
+                      <span style={{ fontWeight: isChecked ? 600 : 400, color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                        {fac.name}
+                      </span>
                     </div>
                   );
                 })}
@@ -1668,25 +1689,36 @@ export const DashboardOwner: React.FC = () => {
           padding: 1rem;
           border-radius: var(--border-radius-sm);
           cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid var(--border-color);
+        }
+
+        .facility-select-item:hover {
+          border-color: var(--primary-color);
+          background: rgba(0, 255, 204, 0.04);
         }
 
         .checkbox-box {
-          width: 20px;
-          height: 20px;
-          border: 1px solid var(--border-color);
-          border-radius: 4px;
+          width: 22px;
+          height: 22px;
+          border: 2px solid var(--border-color);
+          border-radius: 6px;
           background: var(--bg-surface);
           color: var(--primary-color);
           flex-shrink: 0;
+          transition: all 0.2s ease;
         }
 
         .facility-select-item.selected {
           border-color: var(--primary-color);
+          background: rgba(0, 255, 204, 0.08);
+          box-shadow: 0 0 15px rgba(0, 255, 204, 0.15);
         }
 
         .facility-select-item.selected .checkbox-box {
           border-color: var(--primary-color);
-          background: rgba(0, 255, 204, 0.1);
+          background: var(--primary-color);
+          color: #0b0d10;
         }
 
         /* Plans & Products Lists */
