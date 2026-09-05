@@ -1,0 +1,287 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  role          String         @default("CUSTOMER") // "CUSTOMER", "GYM_OWNER", "ADMIN", "EMPLOYEE"
+  phone         String?        @unique
+  salary        Float?         @default(0)
+  resetOtp      String?
+  resetOtpExpiry DateTime?
+  lastLoginAt   DateTime?
+  avatar        String?
+  isApproved    Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  gym           Gym?           // One-to-one (if Gym Owner)
+  subscriptions Subscription[] // Active memberships
+  cart          Cart?
+  orders        Order[]
+  reviews       Review[]
+  favorites     Favorite[]
+  complaints    Complaint[]
+  messagesSent  Message[]      @relation("SentMessages")
+  messagesRecv  Message[]      @relation("ReceivedMessages")
+  notifications Notification[]
+}
+
+model Gym {
+  id                 String           @id @default(uuid())
+  ownerId            String           @unique
+  owner              User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name               String
+  description        String
+  address            String
+  city               String
+  latitude           Float
+  longitude          Float
+  contactNumber      String
+  email              String
+  logo               String?
+  coverImage         String?
+  openingHours       String           // e.g. "06:00 AM - 10:00 PM"
+  trialStartDate     DateTime         @default(now())
+  trialMonths        Int              @default(3)
+  isSubscriptionPaid Boolean          @default(false)
+  isApproved         Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+
+  // Payout / Direct Payment Fields for Gym Owner
+  upiId              String?
+  bankAccountNumber  String?
+  bankIfsc           String?
+  bankAccountName    String?
+  bankName           String?
+  paymentQrCode      String?
+
+  // Prioritization & Promotion Fields
+  isFeatured         Boolean          @default(false)
+  priorityOrder      Int              @default(0)
+  isPromoted         Boolean          @default(false)
+
+  // Relations
+  photos               GymPhoto[]
+  facilities           GymFacility[]
+  plans                MembershipPlan[]
+  subscriptions        Subscription[]
+  updates              GymUpdate[]
+  products             Product[]
+  reviews              Review[]
+  favorites            Favorite[]
+  complaints           Complaint[]
+  subscriptionPayments SubscriptionPayment[]
+}
+
+model GymPhoto {
+  id        String   @id @default(uuid())
+  gymId     String
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  url       String
+  category  String   // "INTERIOR", "EXTERIOR", "EQUIPMENT", "OTHER"
+}
+
+model Facility {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  icon      String        // Icon name (e.g. "Dumbbell", "Wifi")
+  gyms      GymFacility[]
+}
+
+model GymFacility {
+  gymId      String
+  gym        Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  
+  @@id([gymId, facilityId])
+}
+
+model MembershipPlan {
+  id            String         @id @default(uuid())
+  gymId         String
+  gym           Gym            @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  name          String         // e.g., "Basic Monthly", "Annual Pro"
+  price         Float
+  durationDays  Int            // e.g., 30, 90, 365
+  description   String
+  features      String         // Comma-separated list or JSON
+  
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id             String         @id @default(uuid())
+  customerId     String
+  customer       User           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  gymId          String
+  gym            Gym            @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  planId         String
+  plan           MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  startDate      DateTime       @default(now())
+  endDate        DateTime
+  pricePaid      Float
+  status         String         @default("ACTIVE") // "ACTIVE", "EXPIRED", "CANCELLED", "PENDING"
+  createdAt      DateTime       @default(now())
+}
+
+model GymUpdate {
+  id          String   @id @default(uuid())
+  gymId       String
+  gym         Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  gymId       String
+  gym         Gym         @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  price       Float
+  discount    Float       @default(0) // Percentage discount
+  stock       Int         @default(0)
+  image       String?
+  category    String      // "EQUIPMENT", "APPAREL", "SUPPLEMENTS", "ACCESSORIES"
+  isFeatured  Boolean     @default(false)
+  isPromoted  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+}
+
+model Cart {
+  id         String     @id @default(uuid())
+  userId     String     @unique
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items      CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  customerId String
+  customer   User        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  address    String
+  phone      String
+  totalPrice Float
+  status     String      @default("PENDING") // "PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"
+  createdAt  DateTime    @default(now())
+  
+  items      OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+  pricePaid Float
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  gymId      String
+  gym        Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  rating     Int      // 1 to 5
+  comment    String
+  ownerReply String?
+  createdAt  DateTime @default(now())
+}
+
+model Favorite {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  gymId      String
+  gym        Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  
+  @@unique([customerId, gymId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId     String
+  receiver       User         @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content        String
+  imageUrl       String?
+  isEscalated    Boolean      @default(false)
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
+
+model Complaint {
+  id          String   @id @default(uuid())
+  customerId  String
+  customer    User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  gymId       String?
+  gym         Gym?     @relation(fields: [gymId], references: [id], onDelete: SetNull)
+  title       String
+  description String
+  status      String   @default("PENDING") // "PENDING", "RESOLVED", "ACTION_TAKEN"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model PlatformSetting {
+  id                    String   @id @default("default")
+  adminUpiId            String?
+  adminBankName         String?
+  adminBankAccountNumber String?
+  adminBankIfsc         String?
+  adminBankAccountName  String?
+  adminQrCode           String?
+  listingFeeRupees      Float    @default(999)
+  updatedAt             DateTime @updatedAt
+}
+
+model SubscriptionPayment {
+  id            String   @id @default(uuid())
+  gymId         String
+  gym           Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  amount        Float
+  paymentMethod String   // "UPI", "BANK_TRANSFER", "QR_CODE"
+  transactionId String?
+  proofUrl      String?
+  status        String   @default("PENDING") // "PENDING", "VERIFIED", "REJECTED"
+  createdAt     DateTime @default(now())
+}
+
