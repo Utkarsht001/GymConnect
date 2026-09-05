@@ -13,7 +13,7 @@ model User {
   password      String
   name          String
   role          String         @default("CUSTOMER") // "CUSTOMER", "GYM_OWNER", "ADMIN", "EMPLOYEE"
-  phone         String?        @unique
+  phone         String?
   salary        Float?         @default(0)
   resetOtp      String?
   resetOtpExpiry DateTime?

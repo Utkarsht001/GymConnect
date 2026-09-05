@@ -36,13 +36,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email is already registered.' });
     }
 
-    if (phone && phone.trim()) {
-      const existingPhone = await prisma.user.findUnique({ where: { phone: phone.trim() } });
-      if (existingPhone) {
-        return res.status(400).json({ error: 'Phone number is already registered.' });
-      }
-    }
-
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -51,7 +44,7 @@ router.post('/register', async (req, res) => {
         email: email.toLowerCase().trim(),
         password: hashedPassword,
         name,
-        phone: phone ? phone.trim() : null,
+        phone: phone && phone.trim() ? phone.trim() : null,
         role: normalizedRole,
         isApproved,
         avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
@@ -89,7 +82,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/login - Supports Email OR Phone Number
+// POST /api/auth/login - Supports Email OR Phone Number (allows shared phone numbers)
 router.post('/login', async (req, res) => {
   const { email, phone, loginInput, password } = req.body;
   const input = (loginInput || email || phone || '').trim();
@@ -99,8 +92,8 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    // Find user by Email OR Phone Number
-    const user = await prisma.user.findFirst({
+    // Find candidate users by Email OR Phone Number
+    const candidates = await prisma.user.findMany({
       where: {
         OR: [
           { email: input.toLowerCase() },
@@ -109,21 +102,30 @@ router.post('/login', async (req, res) => {
       }
     });
 
-    if (!user) {
+    if (!candidates || candidates.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials. User not found.' });
     }
 
-    // Admin password requirement check
-    if (user.role === 'ADMIN') {
-      const isCorrectAdminPassword = (password === getAdminPassword()) || await bcrypt.compare(password, user.password);
-      if (!isCorrectAdminPassword) {
-        return res.status(401).json({ error: 'Invalid admin credentials or password.' });
+    // Match candidate password
+    let user = null;
+    for (const candidate of candidates) {
+      if (candidate.role === 'ADMIN') {
+        const isCorrectAdminPassword = (password === getAdminPassword()) || await bcrypt.compare(password, candidate.password);
+        if (isCorrectAdminPassword) {
+          user = candidate;
+          break;
+        }
+      } else {
+        const isMatch = await bcrypt.compare(password, candidate.password);
+        if (isMatch) {
+          user = candidate;
+          break;
+        }
       }
-    } else {
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ error: 'Invalid password.' });
-      }
+    }
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid password or credentials.' });
     }
 
     // Check Employee approval status
