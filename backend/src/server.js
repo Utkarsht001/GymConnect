@@ -47,7 +47,7 @@ app.use('/api/complaints', complaintRoutes);
 app.get('/', (req, res) => {
   res.json({
     status: 'ONLINE',
-    message: 'FitHub / Gym Near Me Backend REST API & WebSocket Server',
+    message: 'GYMGO Backend REST API & WebSocket Server',
     version: '2.0.0',
     endpoints: {
       health: '/health',
@@ -60,7 +60,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'FitHub API is running smoothly.' });
+  res.json({ status: 'OK', message: 'GYMGO API is running smoothly.' });
 });
 
 // Socket.IO Connection Handler

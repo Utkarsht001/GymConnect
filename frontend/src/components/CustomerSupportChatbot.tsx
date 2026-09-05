@@ -20,7 +20,7 @@ export const CustomerSupportChatbot: React.FC = () => {
     {
       id: '1',
       sender: 'bot',
-      text: "Hello! 👋 Welcome to FitHub Customer Support. I'm here 24/7 to help you with refunds, gym complaints, membership passes, or live support.",
+      text: "Hello! 👋 Welcome to GYMGO Customer Support. I'm here 24/7 to help you with refunds, gym complaints, membership passes, or live support.",
       options: [
         { label: '💳 Refund / Billing Query', action: 'refund' },
         { label: '🚨 Complain About a Gym', action: 'complaint' },
@@ -131,7 +131,7 @@ export const CustomerSupportChatbot: React.FC = () => {
         <button 
           onClick={() => setIsOpen(true)}
           className="chatbot-trigger-btn glow-btn flex-center animate-pulse"
-          title="FitHub AI Customer Support"
+          title="GYMGO AI Customer Support"
         >
           <Bot size={22} />
           <span>Support Bot</span>
@@ -146,7 +146,7 @@ export const CustomerSupportChatbot: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <Bot size={20} className="text-primary" />
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.95rem' }}>FitHub Assistant</h4>
+                <h4 style={{ margin: 0, fontSize: '0.95rem' }}>GYMGO Assistant</h4>
                 <small className="text-muted" style={{ fontSize: '0.7rem' }}>24/7 AI & Support Ticket Desk</small>
               </div>
             </div>

@@ -347,7 +347,7 @@ export const DashboardAdmin: React.FC = () => {
       <section className="profile-banner-card glass-panel">
         <Shield className="profile-large-avatar text-primary" style={{ width: '70px', height: '70px' }} />
         <div className="profile-meta">
-          <h2>FitHub Control Cockpit</h2>
+          <h2>GYMGO Control Cockpit</h2>
           <p className="profile-email">System Administrator: <b>utkarsht721@gmail.com</b></p>
           <div className="role-tag" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
             SUPER ADMIN ACCESS

@@ -293,7 +293,7 @@ export const Login: React.FC = () => {
             </p>
           ) : (
             <p>
-              New to FitHub?{' '}
+              New to GYMGO?{' '}
               <button onClick={() => { setIsRegister(true); setErrorMsg(''); }} className="toggle-mode-btn">
                 Create Account
               </button>

@@ -579,7 +579,7 @@ export const DashboardOwner: React.FC = () => {
         <aside className="dashboard-navigation-sidebar glass-panel">
           <div className="sidebar-brand text-center">
             <Dumbbell className="text-primary" />
-            <h3>FitHub Owner</h3>
+            <h3>GYMGO Owner</h3>
             {gym ? (
               <span className={`badge badge-${gym.isApproved ? 'approved' : 'pending'}`}>
                 {gym.isApproved ? 'Approved' : 'Pending Approval'}
@@ -658,7 +658,7 @@ export const DashboardOwner: React.FC = () => {
                     🎁 3-Month Free Platform Trial Active
                   </h3>
                   <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    Your gym profile is listed on FitHub for <b>3 Months FREE</b>. After trial, renew platform site subscription to stay listed.
+                    Your gym profile is listed on GYMGO for <b>3 Months FREE</b>. After trial, renew platform site subscription to stay listed.
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

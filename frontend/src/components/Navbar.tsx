@@ -44,7 +44,7 @@ export const Navbar: React.FC = () => {
         <div className="container header-container">
           <Link to="/" className="logo-section">
             <Dumbbell className="logo-icon animate-float" />
-            <span className="logo-text">FitHub <span className="highlight">Connect</span></span>
+            <span className="logo-text">GYM<span className="highlight">GO</span></span>
           </Link>
 
           <nav className="desktop-nav">

@@ -57,7 +57,7 @@ export const GymStore: React.FC = () => {
     <div className="store-page-container container">
       {/* 1. STORE HERO SEARCH HEADER */}
       <section className="store-hero glass-panel text-center">
-        <h1 className="glow-text">FitHub <span className="highlight">Store</span></h1>
+        <h1 className="glow-text">GYM<span className="highlight">GO Store</span></h1>
         <p>Premium training accessories, supplements, and workout gear listed directly by gym owners.</p>
         
         <div className="store-search-box">

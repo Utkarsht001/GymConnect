@@ -181,7 +181,7 @@ export const Home: React.FC = () => {
       <section className="how-it-works-section">
         <div className="container">
           <div className="text-center-wrapper">
-            <h2 className="section-title text-center">How FitHub Works</h2>
+            <h2 className="section-title text-center">How GYMGO Works</h2>
             <p className="section-subtitle text-center">Get started on your training roadmap in 3 steps</p>
           </div>
 
@@ -223,7 +223,7 @@ export const Home: React.FC = () => {
         <div className="reviews-grid">
           <div className="review-card glass-panel">
             <div className="review-rating">★★★★★</div>
-            <p className="review-text">"Finding a gym with a dedicated CrossFit zone and heavy squats racks used to be difficult in Jaipur. FitHub let me locate Iron Paradise and subscribe instantly. Highly recommend!"</p>
+            <p className="review-text">"Finding a gym with a dedicated CrossFit zone and heavy squats racks used to be difficult in Jaipur. GYMGO let me locate Iron Paradise and subscribe instantly. Highly recommend!"</p>
             <div className="review-author">
               <img src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=80" alt="User" />
               <div>
@@ -253,7 +253,7 @@ export const Home: React.FC = () => {
           <div className="cta-content">
             <h2 className="cta-title">Own a Fitness Center?</h2>
             <p className="cta-text">
-              List your gym on FitHub Connect, publish membership tiers, manage product catalogs, and chat directly with hundreds of potential customers today.
+              List your gym on GYMGO, publish membership tiers, manage product catalogs, and chat directly with hundreds of potential customers today.
             </p>
             <Link to="/login?register=owner" className="glow-btn cta-btn">
               List Your Gym <ArrowRight size={18} />
@@ -271,7 +271,7 @@ export const Home: React.FC = () => {
           <div className="footer-brand">
             <div className="logo-section">
               <Dumbbell className="logo-icon" />
-              <span>FitHub <span className="highlight">Connect</span></span>
+              <span>GYM<span className="highlight">GO</span></span>
             </div>
             <p className="footer-brand-text">
               Jaipur's premier multi-gym discovery, management, and e-commerce fitness marketplace.
@@ -293,7 +293,7 @@ export const Home: React.FC = () => {
           </div>
         </div>
         <div className="footer-bottom text-center">
-          <p>© 2026 FitHub Connect. Designed for premium athletic experiences.</p>
+          <p>© 2026 GYMGO. Designed for premium athletic experiences.</p>
         </div>
       </footer>
 
