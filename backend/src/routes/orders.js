@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // POST /api/orders - Checkout cart and create order (Customers only)
 router.post('/', verifyToken, requireRole(['CUSTOMER']), async (req, res) => {

@@ -3,7 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from './prisma.js';
 
 // Route imports
 import authRoutes from './routes/auth.js';
@@ -26,7 +26,6 @@ const io = new Server(server, {
   }
 });
 
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
 // Middleware

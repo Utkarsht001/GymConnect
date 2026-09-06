@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // POST /api/complaints - Lodge a customer complaint
 router.post('/', verifyToken, async (req, res) => {

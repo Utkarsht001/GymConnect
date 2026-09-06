@@ -1,11 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';
 const getAdminPassword = () => process.env.ADMIN_PASSWORD || '9450558546028';
 

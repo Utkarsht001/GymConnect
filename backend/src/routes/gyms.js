@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma.js';
 import { verifyToken, requireRole, requireOwnerOfGym } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/gyms - Discovery listing with optional query filters
 router.get('/', async (req, res) => {
