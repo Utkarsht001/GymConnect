@@ -12,12 +12,10 @@ dist/
 build/
 
 # Database files
-*.db
+!backend/prisma/dev.db
 *.db-journal
 *.db-shm
 *.db-wal
-backend/prisma/dev.db
-backend/prisma/dev.db-journal
 
 # IDE & OS files
 .vscode/
