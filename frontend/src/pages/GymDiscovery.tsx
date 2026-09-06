@@ -104,9 +104,9 @@ export const GymDiscovery: React.FC = () => {
       },
       (err) => {
         setLocatingUser(false);
-        alert('Could not access location: ' + err.message);
+        console.warn('Could not access location:', err.message);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 15000 }
     );
   };
 
