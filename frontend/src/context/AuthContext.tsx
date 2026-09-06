@@ -74,7 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       headers.set('Content-Type', 'application/json');
     }
 
-    const response = await fetch(`http://localhost:5000${url}`, {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       ...options,
       headers
     });

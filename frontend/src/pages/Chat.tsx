@@ -139,8 +139,8 @@ export const Chat: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Connect to Socket.IO server
-    socketRef.current = io('http://localhost:5000');
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    socketRef.current = io(SOCKET_URL);
 
     // Register current user room
     socketRef.current.emit('register', user.id);
