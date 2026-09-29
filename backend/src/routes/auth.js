@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
+import { sendOtpEmail } from '../utils/mailer.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';
@@ -199,9 +200,15 @@ router.post('/forgot-password', async (req, res) => {
       }
     });
 
+    // Send real OTP via email
+    try {
+      await sendOtpEmail(user.email, otp, user.name);
+    } catch (emailError) {
+      console.error('Failed to send OTP email:', emailError);
+    }
+
     return res.json({
-      message: `OTP sent successfully to registered account (${user.email}).`,
-      otp, // Demo response for testing
+      message: `OTP has been sent to your registered email address (${user.email}). Please check your email inbox.`,
       email: user.email,
       phone: user.phone
     });

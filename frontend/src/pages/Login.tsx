@@ -26,7 +26,6 @@ export const Login: React.FC = () => {
   const [forgotInput, setForgotInput] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [demoOtp, setDemoOtp] = useState<string | null>(null);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
   const [forgotErr, setForgotErr] = useState('');
@@ -102,7 +101,6 @@ export const Login: React.FC = () => {
         body: JSON.stringify({ emailOrPhone: forgotInput })
       });
       setForgotMsg(res.message);
-      if (res.otp) setDemoOtp(res.otp);
       setForgotStep('verify');
     } catch (err: any) {
       setForgotErr(err.message || 'Failed to request OTP.');
@@ -322,13 +320,6 @@ export const Login: React.FC = () => {
             {forgotMsg && (
               <div className="glass-card text-center" style={{ padding: '0.6rem', marginBottom: '1rem', border: '1px solid var(--primary-color)' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--primary-color)' }}>{forgotMsg}</span>
-              </div>
-            )}
-
-            {demoOtp && forgotStep === 'verify' && (
-              <div className="glass-card text-center" style={{ padding: '0.6rem', marginBottom: '1rem', background: 'rgba(0,255,204,0.1)' }}>
-                <small className="text-muted" style={{ fontSize: '0.75rem', display: 'block' }}>Verification OTP Code:</small>
-                <code style={{ fontSize: '1.4rem', color: '#00ffcc', fontWeight: 800, letterSpacing: '3px' }}>{demoOtp}</code>
               </div>
             )}
 
