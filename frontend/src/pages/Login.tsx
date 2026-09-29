@@ -290,7 +290,7 @@ export const Login: React.FC = () => {
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label><Lock size={14} /> Password</label>
-              {!isRegister && roleSelection !== 'ADMIN' && (
+              {!isRegister && (
                 <button 
                   type="button" 
                   onClick={() => { setShowForgotModal(true); setForgotInput(emailOrPhone); }}
