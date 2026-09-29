@@ -27,8 +27,23 @@ export const Login: React.FC = () => {
   const [otpInput, setOtpInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const [forgotMsg, setForgotMsg] = useState('');
   const [forgotErr, setForgotErr] = useState('');
+
+  // Countdown timer for Resend OTP button
+  useEffect(() => {
+    let interval: any = null;
+    if (forgotStep === 'verify' && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [forgotStep, resendTimer]);
 
   // Handle URL flags to pre-configure registration views
   useEffect(() => {
@@ -101,11 +116,32 @@ export const Login: React.FC = () => {
         body: JSON.stringify({ emailOrPhone: forgotInput })
       });
       setForgotMsg(res.message);
+      setResendTimer(30);
       setForgotStep('verify');
     } catch (err: any) {
       setForgotErr(err.message || 'Failed to request OTP.');
     } finally {
       setForgotLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || resendLoading) return;
+    setForgotErr('');
+    setForgotMsg('');
+    setResendLoading(true);
+
+    try {
+      const res = await apiFetch('/api/auth/resend-otp', {
+        method: 'POST',
+        body: JSON.stringify({ emailOrPhone: forgotInput })
+      });
+      setForgotMsg(res.message);
+      setResendTimer(30);
+    } catch (err: any) {
+      setForgotErr(err.message || 'Failed to resend OTP.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -368,6 +404,28 @@ export const Login: React.FC = () => {
                 <button type="submit" disabled={forgotLoading} className="glow-btn" style={{ width: '100%', marginTop: '1rem' }}>
                   {forgotLoading ? 'Verifying...' : 'Verify OTP Code'}
                 </button>
+                <div style={{ marginTop: '1.2rem', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendTimer > 0 || resendLoading}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: resendTimer > 0 ? 'var(--text-muted)' : 'var(--primary-color)',
+                      fontSize: '0.85rem',
+                      cursor: resendTimer > 0 ? 'not-allowed' : 'pointer',
+                      fontWeight: 600,
+                      textDecoration: resendTimer > 0 ? 'none' : 'underline'
+                    }}
+                  >
+                    {resendLoading 
+                      ? '🔄 Resending OTP...' 
+                      : resendTimer > 0 
+                        ? `Didn't receive code? Resend OTP in ${resendTimer}s` 
+                        : "Didn't receive code? Resend OTP"}
+                  </button>
+                </div>
               </form>
             )}
 

@@ -201,20 +201,83 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     // Send real OTP via email
+    let emailSent = true;
+    let mailErrorMsg = null;
     try {
       await sendOtpEmail(user.email, otp, user.name);
     } catch (emailError) {
       console.error('Failed to send OTP email:', emailError);
+      emailSent = false;
+      mailErrorMsg = emailError.message;
     }
 
     return res.json({
-      message: `OTP has been sent to your registered email address (${user.email}). Please check your email inbox.`,
+      message: emailSent 
+        ? `OTP has been sent to your registered email address (${user.email}). Please check your email inbox.`
+        : `OTP generated for (${user.email}). (Note: Email service warning: ${mailErrorMsg || 'Please configure SMTP in backend/.env'})`,
       email: user.email,
       phone: user.phone
     });
   } catch (error) {
     console.error('Forgot password error:', error);
     return res.status(500).json({ error: 'Failed to request OTP.' });
+  }
+});
+
+// POST /api/auth/resend-otp - Resend new 6-digit OTP code
+router.post('/resend-otp', async (req, res) => {
+  const { emailOrPhone } = req.body;
+  if (!emailOrPhone) {
+    return res.status(400).json({ error: 'Registered Email or Phone number is required.' });
+  }
+
+  const input = emailOrPhone.trim();
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: input.toLowerCase() },
+          { phone: input }
+        ]
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'No account registered with this email or phone number.' });
+    }
+
+    // Generate new 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // Valid 15 mins
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetOtp: otp,
+        resetOtpExpiry: expiry
+      }
+    });
+
+    let emailSent = true;
+    let mailErrorMsg = null;
+    try {
+      await sendOtpEmail(user.email, otp, user.name);
+    } catch (emailError) {
+      console.error('Failed to resend OTP email:', emailError);
+      emailSent = false;
+      mailErrorMsg = emailError.message;
+    }
+
+    return res.json({
+      message: emailSent
+        ? `A new OTP has been sent to your email address (${user.email}). Please check your inbox.`
+        : `New OTP generated. (Email notice: ${mailErrorMsg || 'Please configure SMTP credentials in backend/.env'})`,
+      email: user.email
+    });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    return res.status(500).json({ error: 'Failed to resend OTP.' });
   }
 });
 
