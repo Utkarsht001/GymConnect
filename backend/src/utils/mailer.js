@@ -91,12 +91,14 @@ export async function sendOtpEmail(toEmail, otpCode, userName = 'Member') {
     `
   };
 
+  console.log(`\n========================================\n📩 OTP DISPATCH TO: ${toEmail}\n🔑 OTP CODE: ${otpCode}\n========================================\n`);
+
   const info = await transporter.sendMail(mailOptions);
   console.log(`[EmailService] OTP email dispatched to ${toEmail}. Response:`, info.messageId || info.response);
 
   const previewUrl = nodemailer.getTestMessageUrl(info);
   if (previewUrl) {
-    console.log(`[EmailService] 🔗 Ethereal Email Web Preview: ${previewUrl}`);
+    console.log(`[EmailService] 🔗 Ethereal Test Inbox Link: ${previewUrl}`);
   }
 
   return info;
