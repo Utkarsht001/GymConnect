@@ -92,7 +92,7 @@ export const Login: React.FC = () => {
         // Login API call (Email or Phone number supported)
         const data = await apiFetch('/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ loginInput: emailOrPhone, password })
+          body: JSON.stringify({ loginInput: emailOrPhone, password, role: roleSelection })
         });
         login(data.token, data.user);
       }
@@ -236,8 +236,86 @@ export const Login: React.FC = () => {
         </div>
 
         {errorMsg && (
-          <div className="error-alert-bar">
+          <div className="error-alert-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
             <span>{errorMsg}</span>
+            {errorMsg.toLowerCase().includes('not found') && !isRegister && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegister(true);
+                  setErrorMsg('');
+                }}
+                style={{
+                  background: 'var(--primary-color)',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  marginTop: '0.25rem'
+                }}
+              >
+                ➕ Create Account with {emailOrPhone || 'this email'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Demo Quick Fill Badges */}
+        {!isRegister && (
+          <div style={{ marginBottom: '1.25rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.4rem', fontWeight: 600 }}>
+              💡 QUICK DEMO ACCOUNTS (Password: <code style={{ color: 'var(--primary-color)' }}>password123</code>):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {roleSelection === 'CUSTOMER' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setEmailOrPhone('arpitasrivastava@gmail.com'); setPassword('password123'); setErrorMsg(''); }}
+                    style={{ background: 'rgba(0,255,204,0.1)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
+                  >
+                    👤 arpitastrivastava@gmail.com
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEmailOrPhone('customer1@fithub.com'); setPassword('password123'); setErrorMsg(''); }}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
+                  >
+                    👤 customer1@fithub.com
+                  </button>
+                </>
+              )}
+              {roleSelection === 'GYM_OWNER' && (
+                <button
+                  type="button"
+                  onClick={() => { setEmailOrPhone('owner1@fithub.com'); setPassword('password123'); setErrorMsg(''); }}
+                  style={{ background: 'rgba(0,255,204,0.1)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
+                >
+                  🏢 owner1@fithub.com
+                </button>
+              )}
+              {roleSelection === 'EMPLOYEE' && (
+                <button
+                  type="button"
+                  onClick={() => { setEmailOrPhone('customer2@fithub.com'); setPassword('password123'); setErrorMsg(''); }}
+                  style={{ background: 'rgba(0,255,204,0.1)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
+                >
+                  🎧 customer2@fithub.com
+                </button>
+              )}
+              {roleSelection === 'ADMIN' && (
+                <button
+                  type="button"
+                  onClick={() => { setEmailOrPhone('admin@fithub.com'); setPassword('9450558546028'); setErrorMsg(''); }}
+                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
+                >
+                  🛡️ admin@fithub.com
+                </button>
+              )}
+            </div>
           </div>
         )}
 

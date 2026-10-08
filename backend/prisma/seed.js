@@ -93,6 +93,16 @@ async function main() {
   });
 
   // Customers
+  const arpita = await prisma.user.create({
+    data: {
+      email: 'arpitasrivastava@gmail.com',
+      password: hashedPassword,
+      name: 'Arpita Srivastava',
+      role: 'CUSTOMER',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    },
+  });
+
   const customer1 = await prisma.user.create({
     data: {
       email: 'customer1@fithub.com',
@@ -116,6 +126,7 @@ async function main() {
   console.log('Created admin, owners, and customers.');
 
   // Create initial empty carts for customers
+  await prisma.cart.create({ data: { userId: arpita.id } });
   await prisma.cart.create({ data: { userId: customer1.id } });
   await prisma.cart.create({ data: { userId: customer2.id } });
 

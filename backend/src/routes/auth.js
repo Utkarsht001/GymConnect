@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
-import { sendOtpEmail } from '../utils/mailer.js';
+import { sendOtpEmail, sendWelcomeEmail, sendLoginNotificationEmail } from '../utils/mailer.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';
@@ -15,6 +15,11 @@ router.post('/register', async (req, res) => {
 
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'Email, password, and name are required.' });
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+  if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+    return res.status(400).json({ error: 'Please enter a valid email address (e.g. user@example.com).' });
   }
 
   const requestedRole = role ? role.toUpperCase() : 'CUSTOMER';
@@ -31,7 +36,7 @@ router.post('/register', async (req, res) => {
   const isApproved = normalizedRole === 'EMPLOYEE' ? false : true;
 
   try {
-    const existingEmail = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const existingEmail = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existingEmail) {
       return res.status(400).json({ error: 'Email is already registered.' });
     }
@@ -41,7 +46,7 @@ router.post('/register', async (req, res) => {
 
     const newUser = await prisma.user.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email: cleanEmail,
         password: hashedPassword,
         name,
         phone: phone && phone.trim() ? phone.trim() : null,
@@ -55,6 +60,13 @@ router.post('/register', async (req, res) => {
     if (normalizedRole === 'CUSTOMER') {
       await prisma.cart.create({
         data: { userId: newUser.id }
+      });
+    }
+
+    // Send Welcome Email asynchronously
+    if (cleanEmail.includes('@')) {
+      sendWelcomeEmail(cleanEmail, newUser.name, newUser.role).catch(err => {
+        console.error('Failed to send welcome email:', err);
       });
     }
 
@@ -84,7 +96,7 @@ router.post('/register', async (req, res) => {
 
 // POST /api/auth/login - Supports Email OR Phone Number (allows shared phone numbers)
 router.post('/login', async (req, res) => {
-  const { email, phone, loginInput, password } = req.body;
+  const { email, phone, loginInput, password, role } = req.body;
   const input = (loginInput || email || phone || '').trim();
 
   if (!input || !password) {
@@ -106,9 +118,19 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials. User not found.' });
     }
 
+    // Prioritize candidates matching the requested role tab if provided
+    let sortedCandidates = candidates;
+    if (role) {
+      const targetRole = role.toUpperCase();
+      sortedCandidates = [
+        ...candidates.filter(c => c.role === targetRole),
+        ...candidates.filter(c => c.role !== targetRole)
+      ];
+    }
+
     // Match candidate password
     let user = null;
-    for (const candidate of candidates) {
+    for (const candidate of sortedCandidates) {
       if (candidate.role === 'ADMIN') {
         const isCorrectAdminPassword = (password === getAdminPassword()) || await bcrypt.compare(password, candidate.password);
         if (isCorrectAdminPassword) {
@@ -138,6 +160,13 @@ router.post('/login', async (req, res) => {
       where: { id: user.id },
       data: { lastLoginAt: new Date() }
     });
+
+    // Send Login Notification Email asynchronously
+    if (user.email && user.email.includes('@')) {
+      sendLoginNotificationEmail(user.email, user.name, user.role).catch(err => {
+        console.error('Failed to send login email notification:', err);
+      });
+    }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, name: user.name },

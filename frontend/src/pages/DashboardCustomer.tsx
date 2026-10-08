@@ -44,9 +44,11 @@ export const DashboardCustomer: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [favorites, setFavorites] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Fetch customer stats & records
   const loadDashboardData = async () => {
+    setErrorMsg(null);
     try {
       // 1. Fetch subscriptions
       const subs = await apiFetch('/api/subscriptions/my');
@@ -65,8 +67,9 @@ export const DashboardCustomer: React.FC = () => {
       } else {
         setFavorites([]);
       }
-    } catch (err) {
-      console.error('Failed to load customer dashboard records');
+    } catch (err: any) {
+      console.error('Failed to load customer dashboard records:', err);
+      setErrorMsg(err.message || 'Failed to connect or fetch user data.');
     } finally {
       setLoading(false);
     }
@@ -133,6 +136,15 @@ export const DashboardCustomer: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {errorMsg && (
+        <div className="error-alert-bar" style={{ margin: '1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠️ {errorMsg}</span>
+          <button type="button" onClick={loadDashboardData} style={{ background: 'var(--primary-color)', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* 2. MAIN LAYOUT GRID */}
       <div className="dashboard-content-split">

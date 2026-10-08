@@ -66,8 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const apiFetch = async (url: string, options: RequestInit = {}) => {
     const headers = new Headers(options.headers || {});
     
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+    // Fallback to stored token if state hasn't hydrated yet
+    const activeToken = token || localStorage.getItem('fithub_token');
+    if (activeToken) {
+      headers.set('Authorization', `Bearer ${activeToken}`);
     }
     
     if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -75,16 +77,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      ...options,
-      headers
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}${url}`, {
+        ...options,
+        headers
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || 'API Request failed');
+      const contentType = response.headers.get('content-type');
+      let data: any = {};
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { error: text || `Server error (${response.status})` };
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `Request failed with status ${response.status}`);
+      }
+      return data;
+    } catch (err: any) {
+      if (err.name === 'TypeError' && err.message?.includes('fetch')) {
+        throw new Error('Unable to connect to backend server. Please make sure the backend server (port 5000) is running.');
+      }
+      throw err;
     }
-    return data;
   };
 
   return (
