@@ -5,6 +5,16 @@ import { Dumbbell, CreditCard, ShoppingBag, ClipboardList, Settings, Sparkles, M
 import L from 'leaflet';
 import { ImageInput } from '../components/ImageInput';
 
+// Configure Leaflet default marker icons for Vite
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  });
+}
+
 interface Gym {
   id: string;
   name: string;
@@ -354,38 +364,47 @@ export const DashboardOwner: React.FC = () => {
 
   // Leaflet coordinates picker logic
   useEffect(() => {
-    if (activeTab !== 'mygym' || !mapRef.current) return;
+    if (activeTab !== 'mygym') return;
 
-    // Set map instances
-    if (!mapInstance.current) {
-      mapInstance.current = L.map(mapRef.current).setView([gymLat, gymLng], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(mapInstance.current);
+    const timer = setTimeout(() => {
+      if (!mapRef.current) return;
 
-      markerInstance.current = L.marker([gymLat, gymLng], { draggable: true })
-        .addTo(mapInstance.current);
+      // Set map instances
+      if (!mapInstance.current) {
+        mapInstance.current = L.map(mapRef.current).setView([gymLat, gymLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19
+        }).addTo(mapInstance.current);
 
-      // Handle marker drag
-      markerInstance.current.on('dragend', () => {
-        const position = markerInstance.current?.getLatLng();
-        if (position) {
-          setGymLat(Number(position.lat.toFixed(6)));
-          setGymLng(Number(position.lng.toFixed(6)));
-        }
-      });
+        markerInstance.current = L.marker([gymLat, gymLng], { draggable: true })
+          .addTo(mapInstance.current);
 
-      // Handle map clicks
-      mapInstance.current.on('click', (e) => {
-        const { lat, lng } = e.latlng;
-        setGymLat(Number(lat.toFixed(6)));
-        setGymLng(Number(lng.toFixed(6)));
-        markerInstance.current?.setLatLng([lat, lng]);
-      });
-    } else {
-      mapInstance.current.setView([gymLat, gymLng], 13);
-      markerInstance.current?.setLatLng([gymLat, gymLng]);
-    }
+        // Handle marker drag
+        markerInstance.current.on('dragend', () => {
+          const position = markerInstance.current?.getLatLng();
+          if (position) {
+            setGymLat(Number(position.lat.toFixed(6)));
+            setGymLng(Number(position.lng.toFixed(6)));
+          }
+        });
+
+        // Handle map clicks
+        mapInstance.current.on('click', (e) => {
+          const { lat, lng } = e.latlng;
+          setGymLat(Number(lat.toFixed(6)));
+          setGymLng(Number(lng.toFixed(6)));
+          markerInstance.current?.setLatLng([lat, lng]);
+        });
+      } else {
+        mapInstance.current.setView([gymLat, gymLng], 13);
+        markerInstance.current?.setLatLng([gymLat, gymLng]);
+      }
+
+      mapInstance.current.invalidateSize();
+    }, 200);
+
+    return () => clearTimeout(timer);
   }, [activeTab]);
 
   const handleCreateOrUpdateGym = async (e: React.FormEvent) => {
@@ -605,46 +624,42 @@ export const DashboardOwner: React.FC = () => {
             >
               <Settings size={16} /> My Gym Setup
             </button>
-            {gym && (
-              <>
-                <button 
-                  onClick={() => setActiveTab('facilities')} 
-                  className={`sidebar-tab-btn ${activeTab === 'facilities' ? 'active' : ''}`}
-                >
-                  <Sparkles size={16} /> Amenities
-                </button>
-                <button 
-                  onClick={() => setActiveTab('plans')} 
-                  className={`sidebar-tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
-                >
-                  <CreditCard size={16} /> Membership Plans
-                </button>
-                <button 
-                  onClick={() => setActiveTab('products')} 
-                  className={`sidebar-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
-                >
-                  <ShoppingBag size={16} /> Store Products
-                </button>
-                <button 
-                  onClick={() => setActiveTab('orders')} 
-                  className={`sidebar-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-                >
-                  <ClipboardList size={16} /> Retail Orders
-                </button>
-                <button 
-                  onClick={() => setActiveTab('updates')} 
-                  className={`sidebar-tab-btn ${activeTab === 'updates' ? 'active' : ''}`}
-                >
-                  <Calendar size={16} /> Gym News/Updates
-                </button>
-                <button 
-                  onClick={() => setActiveTab('payout')} 
-                  className={`sidebar-tab-btn ${activeTab === 'payout' ? 'active' : ''}`}
-                >
-                  <DollarSign size={16} /> Payout & Payment QR
-                </button>
-              </>
-            )}
+            <button 
+              onClick={() => setActiveTab('facilities')} 
+              className={`sidebar-tab-btn ${activeTab === 'facilities' ? 'active' : ''}`}
+            >
+              <Sparkles size={16} /> Amenities
+            </button>
+            <button 
+              onClick={() => setActiveTab('plans')} 
+              className={`sidebar-tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
+            >
+              <CreditCard size={16} /> Membership Plans
+            </button>
+            <button 
+              onClick={() => setActiveTab('products')} 
+              className={`sidebar-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
+            >
+              <ShoppingBag size={16} /> Store & Equipment
+            </button>
+            <button 
+              onClick={() => setActiveTab('orders')} 
+              className={`sidebar-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
+            >
+              <ClipboardList size={16} /> Retail Orders
+            </button>
+            <button 
+              onClick={() => setActiveTab('updates')} 
+              className={`sidebar-tab-btn ${activeTab === 'updates' ? 'active' : ''}`}
+            >
+              <Calendar size={16} /> Gym News/Updates
+            </button>
+            <button 
+              onClick={() => setActiveTab('payout')} 
+              className={`sidebar-tab-btn ${activeTab === 'payout' ? 'active' : ''}`}
+            >
+              <DollarSign size={16} /> Payout & Payment QR
+            </button>
           </nav>
         </aside>
 
@@ -654,6 +669,21 @@ export const DashboardOwner: React.FC = () => {
           {/* TAB: OVERVIEW ANALYTICS */}
           {activeTab === 'overview' && (
             <div className="overview-tab-panel">
+              {!gym && (
+                <div className="glass-card" style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255, 183, 3, 0.4)', background: 'linear-gradient(135deg, rgba(255, 183, 3, 0.1) 0%, rgba(15,23,42,0.7) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: '#ffb703', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      ⚠️ Gym Profile Not Registered Yet
+                    </h3>
+                    <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      Your gym profile is missing. Please save your gym name, location, and photos in <b>My Gym Setup</b> to unlock Store Equipment, Membership Plans, and Retail Orders.
+                    </p>
+                  </div>
+                  <button onClick={() => setActiveTab('mygym')} className="glow-btn" style={{ fontSize: '0.85rem', padding: '0.6rem 1.2rem' }}>
+                    Go to My Gym Setup
+                  </button>
+                </div>
+              )}
               {/* Platform 3-Month Free Trial Banner */}
               <div className="glass-card" style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(0,255,204,0.3)', background: 'linear-gradient(135deg, rgba(0,255,204,0.08) 0%, rgba(15,23,42,0.6) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
@@ -944,61 +974,86 @@ export const DashboardOwner: React.FC = () => {
 
           {/* TAB: FACILITIES / AMENITIES */}
           {activeTab === 'facilities' && (
-            <div className="facilities-tab-panel glass-panel">
-              <h2 className="panel-title">Manage Gym Facilities</h2>
-              <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>Select all facilities and features available inside your club:</p>
-
-              <div className="facilities-selector-grid">
-                {facilitiesList.map(fac => {
-                  const isChecked = selectedFacilities.includes(fac.id);
-                  return (
-                    <div 
-                      key={fac.id}
-                      onClick={() => toggleFacilitySelection(fac.id)}
-                      className={`facility-select-item glass-card ${isChecked ? 'selected' : ''}`}
-                      style={{ cursor: 'pointer', userSelect: 'none' }}
-                      role="checkbox"
-                      aria-checked={isChecked}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === ' ' || e.key === 'Enter') {
-                          e.preventDefault();
-                          toggleFacilitySelection(fac.id);
-                        }
-                      }}
-                    >
-                      <input 
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}} // Controlled by div onClick
-                        style={{ display: 'none' }}
-                      />
-                      <span className="checkbox-box flex-center">
-                        {isChecked && <Check size={14} strokeWidth={3} />}
-                      </span>
-                      <span style={{ fontWeight: isChecked ? 600 : 400, color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                        {fac.name}
-                      </span>
-                    </div>
-                  );
-                })}
+            !gym ? (
+              <div className="dashboard-block-panel glass-panel text-center" style={{ padding: '3.5rem 2rem' }}>
+                <Sparkles size={52} className="text-primary" style={{ margin: '0 auto 1rem auto' }} />
+                <h2>Gym Profile Setup Required</h2>
+                <p className="text-secondary" style={{ maxWidth: '520px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.6' }}>
+                  Please register and save your gym profile first in <b>My Gym Setup</b> before configuring amenities.
+                </p>
+                <button onClick={() => setActiveTab('mygym')} className="glow-btn">
+                  Complete My Gym Setup
+                </button>
               </div>
+            ) : (
+              <div className="facilities-tab-panel glass-panel">
+                <h2 className="panel-title">Manage Gym Facilities</h2>
+                <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>Select all facilities and features available inside your club:</p>
 
-              <button 
-                onClick={handleFacilitiesUpdate} 
-                className="glow-btn save-facilities-btn"
-                style={{ marginTop: '2rem' }}
-              >
-                Save Selected Amenities
-              </button>
-            </div>
+                <div className="facilities-selector-grid">
+                  {facilitiesList.map(fac => {
+                    const isChecked = selectedFacilities.includes(fac.id);
+                    return (
+                      <div 
+                        key={fac.id}
+                        onClick={() => toggleFacilitySelection(fac.id)}
+                        className={`facility-select-item glass-card ${isChecked ? 'selected' : ''}`}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        role="checkbox"
+                        aria-checked={isChecked}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === ' ' || e.key === 'Enter') {
+                            e.preventDefault();
+                            toggleFacilitySelection(fac.id);
+                          }
+                        }}
+                      >
+                        <input 
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // Controlled by div onClick
+                          style={{ display: 'none' }}
+                        />
+                        <span className="checkbox-box flex-center">
+                          {isChecked && <Check size={14} strokeWidth={3} />}
+                        </span>
+                        <span style={{ fontWeight: isChecked ? 600 : 400, color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                          {fac.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button 
+                  onClick={handleFacilitiesUpdate} 
+                  className="glow-btn save-facilities-btn"
+                  style={{ marginTop: '2rem' }}
+                >
+                  Save Selected Amenities
+                </button>
+              </div>
+            )
           )}
 
           {/* TAB: MEMBERSHIP PLANS */}
           {activeTab === 'plans' && (
-            <div className="plans-tab-panel">
-              <div className="dashboard-block-panel glass-panel">
-                <h2 className="panel-title">Add Membership Plan</h2>
+            !gym ? (
+              <div className="dashboard-block-panel glass-panel text-center" style={{ padding: '3.5rem 2rem' }}>
+                <CreditCard size={52} className="text-primary" style={{ margin: '0 auto 1rem auto' }} />
+                <h2>Gym Profile Setup Required</h2>
+                <p className="text-secondary" style={{ maxWidth: '520px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.6' }}>
+                  Please register and save your gym profile first in <b>My Gym Setup</b> before creating membership plans.
+                </p>
+                <button onClick={() => setActiveTab('mygym')} className="glow-btn">
+                  Complete My Gym Setup
+                </button>
+              </div>
+            ) : (
+              <div className="plans-tab-panel">
+                <div className="dashboard-block-panel glass-panel">
+                  <h2 className="panel-title">Add Membership Plan</h2>
                 <form onSubmit={handleAddPlan} className="add-plan-form">
                   <div className="form-row">
                     <div className="form-group">
@@ -1096,41 +1151,54 @@ export const DashboardOwner: React.FC = () => {
                 )}
               </div>
             </div>
+            )
           )}
 
           {/* TAB: STORE PRODUCTS */}
           {activeTab === 'products' && (
-            <div className="products-tab-panel">
-              <div className="dashboard-block-panel glass-panel">
-                <h2>Add Product to E-Store</h2>
-                
-                <form onSubmit={handleAddProduct} className="add-product-form">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Product Name</label>
-                      <input 
-                        type="text" 
-                        value={prodName} 
-                        onChange={(e) => setProdName(e.target.value)}
-                        placeholder="e.g. Ultra Grip Gym Gloves"
-                        className="form-control"
-                        required
-                      />
+            !gym ? (
+              <div className="dashboard-block-panel glass-panel text-center" style={{ padding: '3.5rem 2rem' }}>
+                <ShoppingBag size={52} className="text-primary" style={{ margin: '0 auto 1rem auto' }} />
+                <h2>Store & Equipment Management</h2>
+                <p className="text-secondary" style={{ maxWidth: '520px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.6' }}>
+                  To list gym equipment, weights, apparel, and fitness accessories in the GYMGO Store, please complete and save your gym profile first in <b>My Gym Setup</b>.
+                </p>
+                <button onClick={() => setActiveTab('mygym')} className="glow-btn">
+                  Complete My Gym Setup
+                </button>
+              </div>
+            ) : (
+              <div className="products-tab-panel">
+                <div className="dashboard-block-panel glass-panel">
+                  <h2>Add Product / Equipment to E-Store</h2>
+                  
+                  <form onSubmit={handleAddProduct} className="add-product-form">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Product / Equipment Name</label>
+                        <input 
+                          type="text" 
+                          value={prodName} 
+                          onChange={(e) => setProdName(e.target.value)}
+                          placeholder="e.g. Hex Dumbbell Set 10kg or Weightlifting Belt"
+                          className="form-control"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Category</label>
+                        <select 
+                          value={prodCategory} 
+                          onChange={(e) => setProdCategory(e.target.value)}
+                          className="form-control"
+                        >
+                          <option value="EQUIPMENT">Equipment</option>
+                          <option value="ACCESSORIES">Accessories</option>
+                          <option value="SUPPLEMENTS">Supplements</option>
+                          <option value="APPAREL">Apparel</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label>Category</label>
-                      <select 
-                        value={prodCategory} 
-                        onChange={(e) => setProdCategory(e.target.value)}
-                        className="form-control"
-                      >
-                        <option value="ACCESSORIES">Accessories</option>
-                        <option value="EQUIPMENT">Equipment</option>
-                        <option value="SUPPLEMENTS">Supplements</option>
-                        <option value="APPAREL">Apparel</option>
-                      </select>
-                    </div>
-                  </div>
 
                   <div className="form-row">
                     <div className="form-group">
@@ -1230,119 +1298,158 @@ export const DashboardOwner: React.FC = () => {
                 )}
               </div>
             </div>
+            )
           )}
 
           {/* TAB: RETAIL ORDERS */}
           {activeTab === 'orders' && (
-            <div className="orders-tab-panel glass-panel">
-              <h2 className="panel-title">Customer Store Orders</h2>
-              
-              {orders.length === 0 ? (
-                <p className="text-muted text-center" style={{ padding: '3rem 0' }}>No orders placed for your store yet.</p>
-              ) : (
-                <div className="orders-dashboard-list">
-                  {orders.map(order => (
-                    <div key={order.id} className="order-dashboard-card glass-card" style={{ marginBottom: '1.5rem' }}>
-                      <div className="order-card-header">
-                        <div>
-                          <h4>Order #{order.id.substring(0, 8)}</h4>
-                          <p className="order-date">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
-                          <p className="customer-meta">Customer: <b>{order.customerName}</b> ({order.customerEmail})</p>
-                        </div>
-                        
-                        <div className="status-updater-row">
-                          <label>Status: </label>
-                          <select
-                            value={order.status}
-                            onChange={(e) => handleOrderStatusUpdate(order.id, e.target.value)}
-                            className="form-control status-select"
-                          >
-                            <option value="PENDING">Pending</option>
-                            <option value="CONFIRMED">Confirmed</option>
-                            <option value="PACKED">Packed</option>
-                            <option value="SHIPPED">Shipped</option>
-                            <option value="DELIVERED">Delivered</option>
-                            <option value="CANCELLED">Cancelled</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="order-items-preview">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="order-item-inline">
-                            <img src={item.image} alt="product" />
-                            <div>
-                              <h5>{item.productName}</h5>
-                              <span className="item-qty">Qty: {item.quantity} × ₹{item.pricePaid}</span>
-                            </div>
+            !gym ? (
+              <div className="dashboard-block-panel glass-panel text-center" style={{ padding: '3.5rem 2rem' }}>
+                <ClipboardList size={52} className="text-primary" style={{ margin: '0 auto 1rem auto' }} />
+                <h2>Gym Profile Setup Required</h2>
+                <p className="text-secondary" style={{ maxWidth: '520px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.6' }}>
+                  Please register and save your gym profile first in <b>My Gym Setup</b> before viewing retail store orders.
+                </p>
+                <button onClick={() => setActiveTab('mygym')} className="glow-btn">
+                  Complete My Gym Setup
+                </button>
+              </div>
+            ) : (
+              <div className="orders-tab-panel glass-panel">
+                <h2 className="panel-title">Customer Store Orders</h2>
+                
+                {orders.length === 0 ? (
+                  <p className="text-muted text-center" style={{ padding: '3rem 0' }}>No orders placed for your store yet.</p>
+                ) : (
+                  <div className="orders-dashboard-list">
+                    {orders.map(order => (
+                      <div key={order.id} className="order-dashboard-card glass-card" style={{ marginBottom: '1.5rem' }}>
+                        <div className="order-card-header">
+                          <div>
+                            <h4>Order #{order.id.substring(0, 8)}</h4>
+                            <p className="order-date">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                            <p className="customer-meta">Customer: <b>{order.customerName}</b> ({order.customerEmail})</p>
                           </div>
-                        ))}
-                      </div>
+                          
+                          <div className="status-updater-row">
+                            <label>Status: </label>
+                            <select
+                              value={order.status}
+                              onChange={(e) => handleOrderStatusUpdate(order.id, e.target.value)}
+                              className="form-control status-select"
+                            >
+                              <option value="PENDING">Pending</option>
+                              <option value="CONFIRMED">Confirmed</option>
+                              <option value="PACKED">Packed</option>
+                              <option value="SHIPPED">Shipped</option>
+                              <option value="DELIVERED">Delivered</option>
+                              <option value="CANCELLED">Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
 
-                      <div className="order-card-footer">
-                        <span>Total Price:</span>
-                        <span className="price-bold">₹{order.totalPrice.toFixed(2)}</span>
+                        <div className="order-items-preview">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="order-item-inline">
+                              <img src={item.image} alt="product" />
+                              <div>
+                                <h5>{item.productName}</h5>
+                                <span className="item-qty">Qty: {item.quantity} × ₹{item.pricePaid}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="order-card-footer">
+                          <span>Total Price:</span>
+                          <span className="price-bold">₹{order.totalPrice.toFixed(2)}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* TAB: GYM NEWS UPDATES */}
           {activeTab === 'updates' && (
-            <div className="updates-tab-panel">
-              <div className="dashboard-block-panel glass-panel">
-                <h2>Publish Gym News Update</h2>
-                <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>Broadcasting a post will notify all your active members automatically.</p>
-                
-                <form onSubmit={handlePublishUpdate} className="add-update-form">
-                  <div className="form-group">
-                    <label>Update Title</label>
-                    <input 
-                      type="text" 
-                      value={updateTitle} 
-                      onChange={(e) => setUpdateTitle(e.target.value)}
-                      placeholder="e.g. New Squat Cages Added / Holi Holiday Operating Hours"
-                      className="form-control"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Post Body Content</label>
-                    <textarea 
-                      value={updateDesc} 
-                      onChange={(e) => setUpdateDesc(e.target.value)}
-                      placeholder="Describe the news in detail..."
-                      rows={4}
-                      className="form-control"
-                      required
-                    ></textarea>
-                  </div>
-
-                  <div className="form-group">
-                    <ImageInput
-                      label="Update Photo (Optional)"
-                      value={updateImage}
-                      onChange={(url) => setUpdateImage(url)}
-                      placeholder="Paste Image URL, Google Drive link, or upload local file..."
-                      helpText="Supports Google Drive share links & local saved file uploads"
-                    />
-                  </div>
-
-                  <button type="submit" className="glow-btn">
-                    Broadcast Update
-                  </button>
-                </form>
+            !gym ? (
+              <div className="dashboard-block-panel glass-panel text-center" style={{ padding: '3.5rem 2rem' }}>
+                <Calendar size={52} className="text-primary" style={{ margin: '0 auto 1rem auto' }} />
+                <h2>Gym Profile Setup Required</h2>
+                <p className="text-secondary" style={{ maxWidth: '520px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.6' }}>
+                  Please register and save your gym profile first in <b>My Gym Setup</b> before broadcasting news updates.
+                </p>
+                <button onClick={() => setActiveTab('mygym')} className="glow-btn">
+                  Complete My Gym Setup
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="updates-tab-panel">
+                <div className="dashboard-block-panel glass-panel">
+                  <h2>Publish Gym News Update</h2>
+                  <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>Broadcasting a post will notify all your active members automatically.</p>
+                  
+                  <form onSubmit={handlePublishUpdate} className="add-update-form">
+                    <div className="form-group">
+                      <label>Update Title</label>
+                      <input 
+                        type="text" 
+                        value={updateTitle} 
+                        onChange={(e) => setUpdateTitle(e.target.value)}
+                        placeholder="e.g. New Squat Cages Added / Holi Holiday Operating Hours"
+                        className="form-control"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Post Body Content</label>
+                      <textarea 
+                        value={updateDesc} 
+                        onChange={(e) => setUpdateDesc(e.target.value)}
+                        placeholder="Describe the news in detail..."
+                        rows={4}
+                        className="form-control"
+                        required
+                      ></textarea>
+                    </div>
+
+                    <div className="form-group">
+                      <ImageInput
+                        label="Update Photo (Optional)"
+                        value={updateImage}
+                        onChange={(url) => setUpdateImage(url)}
+                        placeholder="Paste Image URL, Google Drive link, or upload local file..."
+                        helpText="Supports Google Drive share links & local saved file uploads"
+                      />
+                    </div>
+
+                    <button type="submit" className="glow-btn">
+                      Broadcast Update
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )
           )}
 
           {/* TAB: PAYOUT & PAYMENT COLLECTION SETTINGS */}
           {activeTab === 'payout' && (
-            <div className="payout-tab-panel">
+            !gym ? (
+              <div className="dashboard-block-panel glass-panel text-center" style={{ padding: '3.5rem 2rem' }}>
+                <DollarSign size={52} className="text-primary" style={{ margin: '0 auto 1rem auto' }} />
+                <h2>Gym Profile Setup Required</h2>
+                <p className="text-secondary" style={{ maxWidth: '520px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.6' }}>
+                  Please register and save your gym profile first in <b>My Gym Setup</b> before configuring direct payout and payment QR code.
+                </p>
+                <button onClick={() => setActiveTab('mygym')} className="glow-btn">
+                  Complete My Gym Setup
+                </button>
+              </div>
+            ) : (
+              <div className="payout-tab-panel">
               <h2 className="panel-title">Payment Collection & Payout Setup</h2>
               <p className="section-subtitle" style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
                 Configure your Bank Account, UPI ID, and Payment QR Code. Customers purchasing products or joining your gym can transfer funds directly to your accounts!
@@ -1431,6 +1538,7 @@ export const DashboardOwner: React.FC = () => {
                 </form>
               </div>
             </div>
+            )
           )}
         </main>
       </div>
@@ -1664,10 +1772,22 @@ export const DashboardOwner: React.FC = () => {
         }
 
         .coordinate-map-wrapper {
-          height: 250px;
-          border-radius: var(--border-radius-sm);
+          width: 100%;
+          height: 380px;
+          min-height: 380px;
+          border-radius: var(--border-radius-md);
           overflow: hidden;
           border: 1px solid var(--border-color);
+          position: relative;
+          background: #0f172a;
+          margin-top: 0.5rem;
+        }
+
+        .leaflet-map-element, #leaflet-map-picker {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 380px !important;
+          z-index: 1;
         }
 
         .save-gym-btn {
