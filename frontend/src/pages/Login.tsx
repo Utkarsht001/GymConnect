@@ -263,61 +263,6 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        {/* Demo Quick Fill Badges */}
-        {!isRegister && (
-          <div style={{ marginBottom: '1.25rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.4rem', fontWeight: 600 }}>
-              💡 QUICK DEMO ACCOUNTS (Password: <code style={{ color: 'var(--primary-color)' }}>password123</code>):
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {roleSelection === 'CUSTOMER' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => { setEmailOrPhone('arpitasrivastava@gmail.com'); setPassword('password123'); setErrorMsg(''); }}
-                    style={{ background: 'rgba(0,255,204,0.1)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
-                  >
-                    👤 arpitastrivastava@gmail.com
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEmailOrPhone('customer1@fithub.com'); setPassword('password123'); setErrorMsg(''); }}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
-                  >
-                    👤 customer1@fithub.com
-                  </button>
-                </>
-              )}
-              {roleSelection === 'GYM_OWNER' && (
-                <button
-                  type="button"
-                  onClick={() => { setEmailOrPhone('owner1@fithub.com'); setPassword('password123'); setErrorMsg(''); }}
-                  style={{ background: 'rgba(0,255,204,0.1)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
-                >
-                  🏢 owner1@fithub.com
-                </button>
-              )}
-              {roleSelection === 'EMPLOYEE' && (
-                <button
-                  type="button"
-                  onClick={() => { setEmailOrPhone('customer2@fithub.com'); setPassword('password123'); setErrorMsg(''); }}
-                  style={{ background: 'rgba(0,255,204,0.1)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
-                >
-                  🎧 customer2@fithub.com
-                </button>
-              )}
-              {roleSelection === 'ADMIN' && (
-                <button
-                  type="button"
-                  onClick={() => { setEmailOrPhone('admin@fithub.com'); setPassword('9450558546028'); setErrorMsg(''); }}
-                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '4px', fontSize: '0.7rem', padding: '0.2rem 0.4rem', cursor: 'pointer' }}
-                >
-                  🛡️ admin@fithub.com
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Auth form */}
         <form onSubmit={handleSubmit} className="auth-form">

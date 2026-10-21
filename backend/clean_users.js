@@ -4,91 +4,79 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function cleanExceptAdmin() {
-  console.log('Cleaning database: erasing all users and user data except ADMIN...');
+  console.log('--- Cleaning database: erasing all data except ADMIN ---');
 
-  // 1. Find or verify Admin user
-  let admin = await prisma.user.findFirst({
-    where: { role: 'ADMIN' }
-  });
+  const adminPasswordRaw = '9450558546028';
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(adminPasswordRaw, salt);
 
-  if (!admin) {
-    console.log('No Admin found! Creating default Admin account...');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('9450558546028', salt);
-    admin = await prisma.user.create({
-      data: {
-        email: 'admin@fithub.com',
-        password: hashedPassword,
-        name: 'System Admin',
-        role: 'ADMIN',
-        isApproved: true,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      }
-    });
-    console.log('Admin account created: admin@fithub.com / 9450558546028');
-  } else {
-    console.log(`Found existing Admin account: ${admin.email} (ID: ${admin.id})`);
-  }
-
-  // 2. Fetch all non-admin user IDs
-  const nonAdminUsers = await prisma.user.findMany({
-    where: {
-      id: { not: admin.id },
-      role: { not: 'ADMIN' }
+  // 1. Ensure Admin accounts exist
+  await prisma.user.upsert({
+    where: { email: 'utkarsht721@gmail.com' },
+    update: {
+      password: hashedPassword,
+      role: 'ADMIN',
+      name: 'System Admin (Utkarsh)',
+      isApproved: true,
+      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=UtkarshAdmin'
     },
-    select: { id: true, email: true, role: true }
+    create: {
+      email: 'utkarsht721@gmail.com',
+      password: hashedPassword,
+      name: 'System Admin (Utkarsh)',
+      role: 'ADMIN',
+      isApproved: true,
+      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=UtkarshAdmin'
+    }
   });
 
-  const nonAdminIds = nonAdminUsers.map(u => u.id);
-  console.log(`Found ${nonAdminIds.length} non-admin users to delete:`, nonAdminUsers.map(u => `${u.email} (${u.role})`));
-
-  if (nonAdminIds.length > 0) {
-    // Delete dependent tables first or rely on cascade
-    await prisma.notification.deleteMany({ where: { userId: { in: nonAdminIds } } });
-    await prisma.message.deleteMany({
-      where: {
-        OR: [
-          { senderId: { in: nonAdminIds } },
-          { receiverId: { in: nonAdminIds } }
-        ]
-      }
-    });
-    await prisma.review.deleteMany({ where: { customerId: { in: nonAdminIds } } });
-    await prisma.favorite.deleteMany({ where: { customerId: { in: nonAdminIds } } });
-    await prisma.orderItem.deleteMany({ where: { order: { customerId: { in: nonAdminIds } } } });
-    await prisma.order.deleteMany({ where: { customerId: { in: nonAdminIds } } });
-    await prisma.cartItem.deleteMany({ where: { cart: { userId: { in: nonAdminIds } } } });
-    await prisma.cart.deleteMany({ where: { userId: { in: nonAdminIds } } });
-    await prisma.subscription.deleteMany({ where: { customerId: { in: nonAdminIds } } });
-    await prisma.complaint.deleteMany({ where: { customerId: { in: nonAdminIds } } });
-
-    // Gyms belonging to deleted owners
-    const ownerGyms = await prisma.gym.findMany({
-      where: { ownerId: { in: nonAdminIds } },
-      select: { id: true }
-    });
-    const gymIds = ownerGyms.map(g => g.id);
-
-    if (gymIds.length > 0) {
-      await prisma.gymPhoto.deleteMany({ where: { gymId: { in: gymIds } } });
-      await prisma.gymFacility.deleteMany({ where: { gymId: { in: gymIds } } });
-      await prisma.membershipPlan.deleteMany({ where: { gymId: { in: gymIds } } });
-      await prisma.gymUpdate.deleteMany({ where: { gymId: { in: gymIds } } });
-      await prisma.product.deleteMany({ where: { gymId: { in: gymIds } } });
-      await prisma.subscriptionPayment.deleteMany({ where: { gymId: { in: gymIds } } });
-      await prisma.gym.deleteMany({ where: { id: { in: gymIds } } });
+  await prisma.user.upsert({
+    where: { email: 'admin@fithub.com' },
+    update: {
+      password: hashedPassword,
+      role: 'ADMIN',
+      name: 'System Admin',
+      isApproved: true,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
+    },
+    create: {
+      email: 'admin@fithub.com',
+      password: hashedPassword,
+      name: 'System Admin',
+      role: 'ADMIN',
+      isApproved: true,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
     }
+  });
 
-    // Delete non-admin users
-    const deleteResult = await prisma.user.deleteMany({
-      where: { id: { in: nonAdminIds } }
-    });
-    console.log(`Successfully deleted ${deleteResult.count} non-admin user records!`);
-  } else {
-    console.log('No non-admin users found to delete.');
-  }
+  // 2. Clear all customer and gym owner data
+  await prisma.subscriptionPayment.deleteMany();
+  await prisma.complaint.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.favorite.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.subscription.deleteMany();
+  await prisma.gymUpdate.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.membershipPlan.deleteMany();
+  await prisma.gymFacility.deleteMany();
+  await prisma.gymPhoto.deleteMany();
+  await prisma.gym.deleteMany();
 
-  // Print remaining users
+  // 3. Delete all non-admin users
+  const deletedUsers = await prisma.user.deleteMany({
+    where: {
+      role: { not: 'ADMIN' }
+    }
+  });
+
+  console.log(`Deleted non-admin user records: ${deletedUsers.count}`);
+
   const remaining = await prisma.user.findMany({
     select: { id: true, email: true, name: true, role: true }
   });
