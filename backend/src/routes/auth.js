@@ -247,12 +247,19 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/forgot-password - Request Password Reset Link (Brevo Integration)
 router.post('/forgot-password', async (req, res) => {
-  const { email, emailOrPhone } = req.body;
+  const { email, emailOrPhone, frontendUrl } = req.body;
   const input = (email || emailOrPhone || '').trim();
 
   if (!input) {
     return res.status(400).json({ error: 'Registered email address is required.' });
   }
+
+  // Determine client origin for reset link
+  const clientOrigin = frontendUrl 
+    || req.headers.origin 
+    || (req.headers.referer ? new URL(req.headers.referer).origin : null)
+    || process.env.FRONTEND_URL 
+    || 'http://localhost:5173';
 
   // Rate limiting per IP and per Email
   const clientIp = req.ip || req.headers['x-forwarded-for'] || 'unknown';
@@ -293,9 +300,9 @@ router.post('/forgot-password', async (req, res) => {
       }
     });
 
-    // Send transactional email via Brevo
+    // Send transactional email via Brevo with client-origin aware reset link
     try {
-      await sendPasswordResetEmail(user.email, rawToken, user.name);
+      await sendPasswordResetEmail(user.email, rawToken, user.name, clientOrigin);
     } catch (emailError) {
       console.error('[AuthService ERROR] Failed to send Brevo reset email:', emailError.message);
       // Keep going to return generic response to avoid enumeration and expose provider errors to end-user

@@ -122,8 +122,8 @@ io.on('connection', (socket) => {
 
 // Start Server
 if (!process.env.VERCEL && process.env.NODE_ENV !== 'test' && !process.argv[1]?.includes('auth.test.js')) {
-  server.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server listening on http://0.0.0.0:${PORT} (http://localhost:${PORT})`);
   });
 }
 

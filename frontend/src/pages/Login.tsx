@@ -130,7 +130,10 @@ export const Login: React.FC = () => {
     try {
       const res = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email: cleanEmail })
+        body: JSON.stringify({
+          email: cleanEmail,
+          frontendUrl: window.location.origin
+        })
       });
       setForgotSent(true);
       setForgotMsg(res.message || 'If an account exists with this email, a password reset link has been dispatched. Please check your inbox.');

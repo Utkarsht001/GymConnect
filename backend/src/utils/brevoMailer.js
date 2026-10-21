@@ -135,8 +135,9 @@ export async function sendBrevoTransactionalEmail({ to, subject, htmlContent, te
  * @param {string} [userName] 
  * @returns {Promise<{ messageId: string, status: number }>}
  */
-export async function sendPasswordResetEmail(toEmail, rawResetToken, userName = 'Member') {
-  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+export async function sendPasswordResetEmail(toEmail, rawResetToken, userName = 'Member', customFrontendUrl) {
+  const baseOrigin = customFrontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = baseOrigin.replace(/\/+$/, '');
   const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(rawResetToken)}`;
 
   const subject = '🔐 Reset Your GymConnect Password';
