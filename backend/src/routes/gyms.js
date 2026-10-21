@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../prisma.js';
-import { verifyToken, requireRole, requireOwnerOfGym } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+import { verifyToken, requireRole, requireOwnerOfGym, getJwtSecret } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -17,8 +18,7 @@ router.get('/', async (req, res) => {
     try {
       const authHeader = req.headers['authorization'];
       const token = authHeader && authHeader.split(' ')[1];
-      const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, getJwtSecret());
       if (decoded.role === 'ADMIN') {
         where.isApproved = false;
       } else {

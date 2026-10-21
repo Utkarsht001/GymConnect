@@ -4,8 +4,11 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = 'utkarsht721@gmail.com';
-  const adminPasswordRaw = '9450558546028';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@fithub.com';
+  const adminPasswordRaw = process.env.ADMIN_PASSWORD;
+  if (!adminPasswordRaw) {
+    throw new Error('ADMIN_PASSWORD environment variable is required to seed admin user.');
+  }
   
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(adminPasswordRaw, salt);

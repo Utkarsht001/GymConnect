@@ -3,13 +3,21 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../prisma.js';
-import { verifyToken, requireRole } from '../middleware/auth.js';
+import { verifyToken, requireRole, getJwtSecret } from '../middleware/auth.js';
 import { sendOtpEmail, sendWelcomeEmail, sendLoginNotificationEmail } from '../utils/mailer.js';
 import { sendPasswordResetEmail, checkBrevoConfiguration } from '../utils/brevoMailer.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';
-const getAdminPassword = () => process.env.ADMIN_PASSWORD || '9450558546028';
+const getAdminPassword = () => {
+  const adminPass = process.env.ADMIN_PASSWORD;
+  if (!adminPass) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[SECURITY FATAL] ADMIN_PASSWORD environment variable is missing in production!');
+    }
+    return 'admin-dev-fallback-password-replace-in-env';
+  }
+  return adminPass;
+};
 
 // Simple in-memory rate limiters for security
 const resetRequestStore = new Map(); // key -> timestamps[]
@@ -105,7 +113,7 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, role: newUser.role, name: newUser.name },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -213,7 +221,7 @@ router.post('/login', async (req, res) => {
     // JWT payload contains user's actual database role (server-side RBAC)
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, name: user.name },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 

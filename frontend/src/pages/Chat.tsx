@@ -139,7 +139,7 @@ export const Chat: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
     socketRef.current = io(SOCKET_URL);
 
     // Register current user room

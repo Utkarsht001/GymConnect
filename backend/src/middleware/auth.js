@@ -2,7 +2,17 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';
+
+export const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[SECURITY FATAL] JWT_SECRET environment variable is missing in production!');
+    }
+    return 'gymconnect-dev-secret-replace-in-env';
+  }
+  return secret;
+};
 
 export const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -13,7 +23,7 @@ export const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     req.user = decoded;
     next();
   } catch (err) {

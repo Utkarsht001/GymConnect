@@ -6,7 +6,10 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('--- Starting Data Wipe: Preserving ONLY Admin Account(s) ---');
 
-  const adminPasswordRaw = '9450558546028';
+  const adminPasswordRaw = process.env.ADMIN_PASSWORD;
+  if (!adminPasswordRaw) {
+    throw new Error('ADMIN_PASSWORD environment variable is required to run wipe script.');
+  }
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(adminPasswordRaw, salt);
 

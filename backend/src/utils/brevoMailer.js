@@ -31,6 +31,13 @@ export function checkBrevoConfiguration() {
   };
 }
 
+function extractEmailAddress(input) {
+  if (!input || typeof input !== 'string') return '';
+  const match = input.match(/<([^>]+)>/);
+  if (match) return match[1].trim().toLowerCase();
+  return input.trim().toLowerCase();
+}
+
 /**
  * Generic Brevo Transactional Email Sender via direct REST API
  * @param {Object} options
@@ -51,7 +58,8 @@ export async function sendBrevoTransactionalEmail({ to, subject, htmlContent, te
   }
 
   const apiKey = process.env.BREVO_API_KEY.trim();
-  const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || config.senderEmail;
+  const rawSenderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || config.senderEmail;
+  const senderEmail = extractEmailAddress(rawSenderEmail);
   const senderName = process.env.BREVO_SENDER_NAME || 'GymConnect';
 
   const payload = {
