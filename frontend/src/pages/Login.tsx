@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Dumbbell, Mail, Lock, User, Phone, ArrowRight, KeyRound, X } from 'lucide-react';
+import { Dumbbell, Mail, Lock, User, Phone, ArrowRight, KeyRound, X, CheckCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { user, login, apiFetch } = useAuth();
@@ -20,30 +20,13 @@ export const Login: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Forgot Password / OTP Modal states
+  // Forgot Password Modal states
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState<'request' | 'verify' | 'reset'>('request');
   const [forgotInput, setForgotInput] = useState('');
-  const [otpInput, setOtpInput] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
+  const [forgotSent, setForgotSent] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
   const [forgotErr, setForgotErr] = useState('');
-
-  // Countdown timer for Resend OTP button
-  useEffect(() => {
-    let interval: any = null;
-    if (forgotStep === 'verify' && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [forgotStep, resendTimer]);
 
   // Handle URL flags to pre-configure registration views
   useEffect(() => {
@@ -72,6 +55,29 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    const cleanInput = emailOrPhone.trim();
+    if (!cleanInput) {
+      setErrorMsg('Please enter your registered email address or mobile phone number.');
+      return;
+    }
+
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
+    if (isRegister) {
+      if (!name.trim()) {
+        setErrorMsg('Please enter your full name.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.');
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
@@ -80,109 +86,56 @@ export const Login: React.FC = () => {
         const data = await apiFetch('/api/auth/register', {
           method: 'POST',
           body: JSON.stringify({
-            email: emailOrPhone,
-            phone,
+            email: cleanInput,
+            phone: phone.trim() || undefined,
             password,
-            name,
+            name: name.trim(),
             role: roleSelection
           })
         });
         login(data.token, data.user);
       } else {
-        // Login API call (Email or Phone number supported)
+        // Login API call (Supports Email or Phone number)
         const data = await apiFetch('/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ loginInput: emailOrPhone, password, role: roleSelection })
+          body: JSON.stringify({
+            loginInput: cleanInput,
+            password,
+            role: roleSelection
+          })
         });
         login(data.token, data.user);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Check your details.');
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Forgot Password OTP Handlers
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  // Forgot Password Reset Link Handler
+  const handleRequestResetLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotErr('');
     setForgotMsg('');
+
+    const cleanEmail = forgotInput.trim();
+    if (!cleanEmail) {
+      setForgotErr('Please enter your registered email address.');
+      return;
+    }
+
     setForgotLoading(true);
 
     try {
       const res = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ emailOrPhone: forgotInput })
+        body: JSON.stringify({ email: cleanEmail })
       });
-      setForgotMsg(res.message);
-      setResendTimer(30);
-      setForgotStep('verify');
+      setForgotSent(true);
+      setForgotMsg(res.message || 'If an account exists with this email, a password reset link has been dispatched. Please check your inbox.');
     } catch (err: any) {
-      setForgotErr(err.message || 'Failed to request OTP.');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (resendTimer > 0 || resendLoading) return;
-    setForgotErr('');
-    setForgotMsg('');
-    setResendLoading(true);
-
-    try {
-      const res = await apiFetch('/api/auth/resend-otp', {
-        method: 'POST',
-        body: JSON.stringify({ emailOrPhone: forgotInput })
-      });
-      setForgotMsg(res.message);
-      setResendTimer(30);
-    } catch (err: any) {
-      setForgotErr(err.message || 'Failed to resend OTP.');
-    } finally {
-      setResendLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotErr('');
-    setForgotMsg('');
-    setForgotLoading(true);
-
-    try {
-      await apiFetch('/api/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({ emailOrPhone: forgotInput, otp: otpInput })
-      });
-      setForgotMsg('OTP Code Verified! Enter your new password below.');
-      setForgotStep('reset');
-    } catch (err: any) {
-      setForgotErr(err.message || 'Invalid OTP code.');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotErr('');
-    setForgotMsg('');
-    setForgotLoading(true);
-
-    try {
-      await apiFetch('/api/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ emailOrPhone: forgotInput, otp: otpInput, newPassword })
-      });
-      alert('Password reset successfully! Please log in with your new password.');
-      setShowForgotModal(false);
-      setForgotStep('request');
-      setPassword(newPassword);
-      setEmailOrPhone(forgotInput);
-    } catch (err: any) {
-      setForgotErr(err.message || 'Failed to reset password.');
+      setForgotErr(err.message || 'Failed to request password reset link. Please try again.');
     } finally {
       setForgotLoading(false);
     }
@@ -236,33 +189,10 @@ export const Login: React.FC = () => {
         </div>
 
         {errorMsg && (
-          <div className="error-alert-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+          <div className="error-alert-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
             <span>{errorMsg}</span>
-            {errorMsg.toLowerCase().includes('not found') && !isRegister && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegister(true);
-                  setErrorMsg('');
-                }}
-                style={{
-                  background: 'var(--primary-color)',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.35rem 0.75rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  marginTop: '0.25rem'
-                }}
-              >
-                ➕ Create Account with {emailOrPhone || 'this email'}
-              </button>
-            )}
           </div>
         )}
-
 
         {/* Auth form */}
         <form onSubmit={handleSubmit} className="auth-form">
@@ -289,7 +219,6 @@ export const Login: React.FC = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="form-control"
-                    required
                   />
                 </div>
               )}
@@ -316,7 +245,13 @@ export const Login: React.FC = () => {
               {!isRegister && (
                 <button 
                   type="button" 
-                  onClick={() => { setShowForgotModal(true); setForgotInput(emailOrPhone); }}
+                  onClick={() => {
+                    setShowForgotModal(true);
+                    setForgotInput(emailOrPhone.includes('@') ? emailOrPhone.trim() : '');
+                    setForgotSent(false);
+                    setForgotErr('');
+                    setForgotMsg('');
+                  }}
                   className="forgot-password-link-btn"
                   style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', cursor: 'pointer' }}
                 >
@@ -359,10 +294,10 @@ export const Login: React.FC = () => {
         </div>
       </div>
 
-      {/* FORGOT PASSWORD OTP MODAL */}
+      {/* FORGOT PASSWORD RESET LINK MODAL */}
       {showForgotModal && (
-        <div className="modal-overlay flex-center" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, padding: '1rem' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '420px', padding: '2rem', borderRadius: '12px', position: 'relative' }}>
+        <div className="modal-overlay flex-center" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '2rem', borderRadius: '12px', position: 'relative' }}>
             <button 
               onClick={() => setShowForgotModal(false)}
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
@@ -372,13 +307,14 @@ export const Login: React.FC = () => {
 
             <div className="text-center" style={{ marginBottom: '1.5rem' }}>
               <KeyRound size={36} className="text-primary animate-float" />
-              <h3 style={{ margin: '0.5rem 0 0.2rem 0' }}>Reset Password OTP</h3>
-              <p className="text-secondary" style={{ fontSize: '0.8rem' }}>Verify registered Email or Phone number</p>
+              <h3 style={{ margin: '0.5rem 0 0.2rem 0' }}>Recover Password</h3>
+              <p className="text-secondary" style={{ fontSize: '0.8rem' }}>Receive a secure reset link in your email</p>
             </div>
 
             {forgotMsg && (
-              <div className="glass-card text-center" style={{ padding: '0.6rem', marginBottom: '1rem', border: '1px solid var(--primary-color)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--primary-color)' }}>{forgotMsg}</span>
+              <div className="glass-card text-center" style={{ padding: '0.85rem', marginBottom: '1.25rem', border: '1px solid var(--primary-color)' }}>
+                <CheckCircle size={24} style={{ color: 'var(--primary-color)', margin: '0 auto 0.5rem auto' }} />
+                <p style={{ fontSize: '0.82rem', color: '#f0f6fc', lineHeight: 1.5, margin: 0 }}>{forgotMsg}</p>
               </div>
             )}
 
@@ -388,88 +324,38 @@ export const Login: React.FC = () => {
               </div>
             )}
 
-            {/* STEP 1: Request OTP */}
-            {forgotStep === 'request' && (
-              <form onSubmit={handleRequestOtp}>
+            {!forgotSent ? (
+              <form onSubmit={handleRequestResetLink}>
                 <div className="form-group">
-                  <label><Mail size={14} /> Registered Email or Phone</label>
+                  <label><Mail size={14} /> Registered Email Address</label>
                   <input 
-                    type="text"
-                    placeholder="e.g. name@example.com or 9876543210"
+                    type="email"
+                    placeholder="e.g. name@example.com"
                     value={forgotInput}
                     onChange={(e) => setForgotInput(e.target.value)}
                     className="form-control"
                     required
+                    autoFocus
                   />
+                  <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.35rem', display: 'block' }}>
+                    We'll send a 15-minute single-use password reset link via Brevo.
+                  </small>
                 </div>
-                <button type="submit" disabled={forgotLoading} className="glow-btn" style={{ width: '100%', marginTop: '1rem' }}>
-                  {forgotLoading ? 'Sending OTP...' : 'Send Verification OTP'}
+                <button type="submit" disabled={forgotLoading} className="glow-btn" style={{ width: '100%', marginTop: '1.25rem' }}>
+                  {forgotLoading ? 'Dispatching Reset Link...' : 'Send Password Reset Link'}
                 </button>
               </form>
-            )}
-
-            {/* STEP 2: Verify OTP */}
-            {forgotStep === 'verify' && (
-              <form onSubmit={handleVerifyOtp}>
-                <div className="form-group">
-                  <label><KeyRound size={14} /> Enter 6-Digit OTP Code</label>
-                  <input 
-                    type="text"
-                    placeholder="Enter 6-digit code..."
-                    value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value)}
-                    className="form-control"
-                    maxLength={6}
-                    required
-                    style={{ letterSpacing: '4px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 700 }}
-                  />
-                </div>
-                <button type="submit" disabled={forgotLoading} className="glow-btn" style={{ width: '100%', marginTop: '1rem' }}>
-                  {forgotLoading ? 'Verifying...' : 'Verify OTP Code'}
+            ) : (
+              <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="glow-btn"
+                  style={{ width: '100%' }}
+                >
+                  Return to Sign In
                 </button>
-                <div style={{ marginTop: '1.2rem', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={resendTimer > 0 || resendLoading}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: resendTimer > 0 ? 'var(--text-muted)' : 'var(--primary-color)',
-                      fontSize: '0.85rem',
-                      cursor: resendTimer > 0 ? 'not-allowed' : 'pointer',
-                      fontWeight: 600,
-                      textDecoration: resendTimer > 0 ? 'none' : 'underline'
-                    }}
-                  >
-                    {resendLoading 
-                      ? '🔄 Resending OTP...' 
-                      : resendTimer > 0 
-                        ? `Didn't receive code? Resend OTP in ${resendTimer}s` 
-                        : "Didn't receive code? Resend OTP"}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 3: Reset Password */}
-            {forgotStep === 'reset' && (
-              <form onSubmit={handleResetPassword}>
-                <div className="form-group">
-                  <label><Lock size={14} /> Enter New Password</label>
-                  <input 
-                    type="password"
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="form-control"
-                    required
-                  />
-                </div>
-                <button type="submit" disabled={forgotLoading} className="glow-btn" style={{ width: '100%', marginTop: '1rem' }}>
-                  {forgotLoading ? 'Updating Password...' : 'Save New Password & Login'}
-                </button>
-              </form>
+              </div>
             )}
           </div>
         </div>

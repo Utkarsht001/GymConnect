@@ -9,6 +9,7 @@ import { GymStore } from './pages/GymStore';
 import { Cart } from './pages/Cart';
 import { Chat } from './pages/Chat';
 import { Login } from './pages/Login';
+import { ResetPassword } from './pages/ResetPassword';
 import { Notifications } from './pages/Notifications';
 import { DashboardCustomer } from './pages/DashboardCustomer';
 import { DashboardOwner } from './pages/DashboardOwner';
@@ -32,6 +33,7 @@ const App: React.FC = () => {
               <Route path="/cart" element={<Cart />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/dashboard/customer" element={<DashboardCustomer />} />
               <Route path="/dashboard/owner" element={<DashboardOwner />} />

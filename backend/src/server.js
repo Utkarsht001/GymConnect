@@ -1,8 +1,8 @@
+import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import prisma from './prisma.js';
 
 // Route imports
@@ -14,8 +14,6 @@ import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import messageRoutes from './routes/messages.js';
 import complaintRoutes from './routes/complaints.js';
-
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -123,7 +121,7 @@ io.on('connection', (socket) => {
 });
 
 // Start Server
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test' && !process.argv[1]?.includes('auth.test.js')) {
   server.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
   });

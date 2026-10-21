@@ -2,11 +2,21 @@ import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function getDatabaseUrl() {
+  // If an explicit external database URL is configured, respect it
+  if (process.env.DATABASE_URL && 
+      !process.env.DATABASE_URL.startsWith('file:./') && 
+      !process.env.DATABASE_URL.includes('/tmp/dev.db')) {
+    return process.env.DATABASE_URL;
+  }
   const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
   
   if (isVercel) {

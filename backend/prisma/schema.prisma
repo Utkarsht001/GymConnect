@@ -18,6 +18,8 @@ model User {
   salary        Float?         @default(0)
   resetOtp      String?
   resetOtpExpiry DateTime?
+  resetTokenHash   String?
+  resetTokenExpiry DateTime?
   lastLoginAt   DateTime?
   avatar        String?
   isApproved    Boolean        @default(true)
