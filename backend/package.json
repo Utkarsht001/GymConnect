@@ -7,7 +7,8 @@
     "build": "prisma generate",
     "vercel-build": "prisma generate",
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "import-gyms": "node import_jaipur_gyms.js"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",
