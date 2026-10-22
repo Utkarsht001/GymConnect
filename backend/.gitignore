@@ -5,3 +5,10 @@ node_modules/
 *.log
 npm-debug.log*
 dev.db.bak
+sqlite_backup_data.json
+*backup*.json
+temp_neon_test.prisma
+export_sqlite.js
+import_to_pg.js
+test_neon.js
+verify_neon.js

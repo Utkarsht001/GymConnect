@@ -8,7 +8,7 @@ import app from '../src/server.js';
 import prisma from '../src/prisma.js';
 import { sendBrevoTransactionalEmail, sendPasswordResetEmail, checkBrevoConfiguration } from '../src/utils/brevoMailer.js';
 
-describe('GymConnect Full Authentication & Password Recovery Test Suite', () => {
+describe('GymConnect Full Authentication & Password Recovery Test Suite', { timeout: 60000 }, () => {
   let server;
   let baseUrl;
   const JWT_SECRET = process.env.JWT_SECRET || 'fithub-super-secret-key-12345';

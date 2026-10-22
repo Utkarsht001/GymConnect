@@ -1,54 +1,15 @@
 import { PrismaClient } from '@prisma/client';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
 import dotenv from 'dotenv';
 
 // Ensure environment variables are loaded
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 function getDatabaseUrl() {
-  // If an explicit external database URL is configured, respect it
-  if (process.env.DATABASE_URL && 
-      !process.env.DATABASE_URL.startsWith('file:./') && 
-      !process.env.DATABASE_URL.includes('/tmp/dev.db')) {
-    return process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+  if (!url) {
+    throw new Error('[Prisma Fatal] DATABASE_URL (or NEON_DATABASE_URL) environment variable is not defined.');
   }
-  const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-  
-  if (isVercel) {
-    const tmpDb = '/tmp/dev.db';
-    if (!fs.existsSync(tmpDb)) {
-      const candidates = [
-        path.resolve(__dirname, '../prisma/dev.db'),
-        path.resolve(__dirname, '../../prisma/dev.db'),
-        path.resolve(process.cwd(), 'prisma/dev.db'),
-        path.resolve(process.cwd(), 'backend/prisma/dev.db')
-      ];
-      const found = candidates.find(c => fs.existsSync(c));
-      if (found) {
-        try {
-          fs.copyFileSync(found, tmpDb);
-          console.log(`Successfully copied SQLite DB from ${found} to ${tmpDb}`);
-        } catch (e) {
-          console.error('Error copying SQLite DB to /tmp:', e);
-        }
-      }
-    }
-    return `file:${tmpDb}`;
-  }
-
-  // Local development fallback
-  const localCandidates = [
-    path.resolve(__dirname, '../prisma/dev.db'),
-    path.resolve(process.cwd(), 'prisma/dev.db'),
-    path.resolve(process.cwd(), 'backend/prisma/dev.db')
-  ];
-  const localFound = localCandidates.find(c => fs.existsSync(c)) || localCandidates[0];
-  return `file:${localFound}`;
+  return url;
 }
 
 const dbUrl = getDatabaseUrl();
@@ -56,13 +17,7 @@ process.env.DATABASE_URL = dbUrl;
 
 const globalForPrisma = globalThis;
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({
-  datasources: {
-    db: {
-      url: dbUrl
-    }
-  }
-});
+export const prisma = globalForPrisma.prisma || new PrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
