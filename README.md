@@ -1,4 +1,4 @@
-# Comprehensive PRD, Architecture & Technical Workflow Specification
+
 **Project Name:** GymConnect ("Gym Near Me")  
 **Version:** 2.0.0  
 **Target Platform:** Web Desktop & Mobile Responsive  
