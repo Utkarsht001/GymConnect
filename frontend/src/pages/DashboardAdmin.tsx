@@ -110,37 +110,43 @@ export const DashboardAdmin: React.FC = () => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch all gyms (Admin status=ALL gets all approved, pending, and rejected gyms)
-      const gymsData = await apiFetch('/api/gyms?status=ALL');
-      setGyms(gymsData || []);
+      // Parallelize all admin queries concurrently with Promise.allSettled
+      const [gymsRes, usersRes, complaintsRes, settingsRes, paymentsRes, prodsRes] = await Promise.allSettled([
+        apiFetch('/api/gyms?status=ALL'),
+        apiFetch('/api/auth/admin/users'),
+        apiFetch('/api/complaints'),
+        apiFetch('/api/subscriptions/platform-payment'),
+        apiFetch('/api/subscriptions/admin/payments'),
+        apiFetch('/api/products')
+      ]);
 
-      // 2. Fetch all users
-      const usersData = await apiFetch('/api/auth/admin/users');
-      setUsersList(usersData || []);
-
-      // 3. Fetch complaints
-      const complaintsData = await apiFetch('/api/complaints');
-      setComplaints(complaintsData || []);
-
-      // 4. Fetch admin platform settings
-      const settingsData = await apiFetch('/api/subscriptions/platform-payment');
-      if (settingsData) {
-        setAdminUpiId(settingsData.adminUpiId || '');
-        setAdminBankName(settingsData.adminBankName || '');
-        setAdminBankAccountNumber(settingsData.adminBankAccountNumber || '');
-        setAdminBankIfsc(settingsData.adminBankIfsc || '');
-        setAdminBankAccountName(settingsData.adminBankAccountName || '');
-        setAdminQrCode(settingsData.adminQrCode || '');
-        setListingFee(settingsData.listingFeeRupees || 999);
+      if (gymsRes.status === 'fulfilled') {
+        setGyms(gymsRes.value || []);
       }
-
-      // 5. Fetch platform subscription payments
-      const paymentsData = await apiFetch('/api/subscriptions/admin/payments');
-      setSubPayments(paymentsData || []);
-
-      // 6. Fetch store products for promotion controls
-      const prodsData = await apiFetch('/api/products');
-      setProductsList(prodsData || []);
+      if (usersRes.status === 'fulfilled') {
+        setUsersList(usersRes.value || []);
+      }
+      if (complaintsRes.status === 'fulfilled') {
+        setComplaints(complaintsRes.value || []);
+      }
+      if (settingsRes.status === 'fulfilled') {
+        const settingsData = settingsRes.value;
+        if (settingsData) {
+          setAdminUpiId(settingsData.adminUpiId || '');
+          setAdminBankName(settingsData.adminBankName || '');
+          setAdminBankAccountNumber(settingsData.adminBankAccountNumber || '');
+          setAdminBankIfsc(settingsData.adminBankIfsc || '');
+          setAdminBankAccountName(settingsData.adminBankAccountName || '');
+          setAdminQrCode(settingsData.adminQrCode || '');
+          setListingFee(settingsData.listingFeeRupees || 999);
+        }
+      }
+      if (paymentsRes.status === 'fulfilled') {
+        setSubPayments(paymentsRes.value || []);
+      }
+      if (prodsRes.status === 'fulfilled') {
+        setProductsList(prodsRes.value || []);
+      }
     } catch (err) {
       console.error('Failed to load admin dashboard records');
     } finally {

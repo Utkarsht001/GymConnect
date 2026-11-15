@@ -40,39 +40,38 @@ router.get('/conversations', verifyToken, async (req, res) => {
       orderBy: { createdAt: 'asc' }
     });
 
-    // Group messages by the other user ID to construct unique conversations
+    // Group messages by the other user ID to construct unique conversations in a single pass (O(1) in-memory)
     const conversationsMap = {};
     messages.forEach(msg => {
       const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
       if (!otherUser) return;
       
-      conversationsMap[otherUser.id] = {
-        otherUser: {
-          id: otherUser.id,
-          name: otherUser.name,
-          avatar: otherUser.avatar,
-          role: otherUser.role,
-          gymName: otherUser.gym?.name || null,
-          gymId: otherUser.gym?.id || null,
-        },
-        lastMessage: msg.content || (msg.imageUrl ? '📷 [Image attachment]' : ''),
-        lastMessageAt: msg.createdAt,
-        lastMessageSenderId: msg.senderId,
-        unreadCount: 0
-      };
-    });
+      if (!conversationsMap[otherUser.id]) {
+        conversationsMap[otherUser.id] = {
+          otherUser: {
+            id: otherUser.id,
+            name: otherUser.name,
+            avatar: otherUser.avatar,
+            role: otherUser.role,
+            gymName: otherUser.gym?.name || null,
+            gymId: otherUser.gym?.id || null,
+          },
+          lastMessage: msg.content || (msg.imageUrl ? '📷 [Image attachment]' : ''),
+          lastMessageAt: msg.createdAt,
+          lastMessageSenderId: msg.senderId,
+          unreadCount: 0
+        };
+      } else {
+        conversationsMap[otherUser.id].lastMessage = msg.content || (msg.imageUrl ? '📷 [Image attachment]' : '');
+        conversationsMap[otherUser.id].lastMessageAt = msg.createdAt;
+        conversationsMap[otherUser.id].lastMessageSenderId = msg.senderId;
+      }
 
-    // Count unreads correctly for each conversation
-    for (const otherId in conversationsMap) {
-      const count = await prisma.message.count({
-        where: {
-          senderId: otherId,
-          receiverId: userId,
-          isRead: false
-        }
-      });
-      conversationsMap[otherId].unreadCount = count;
-    }
+      // Compute unread count directly in memory without N+1 database queries
+      if (msg.receiverId === userId && !msg.isRead) {
+        conversationsMap[otherUser.id].unreadCount += 1;
+      }
+    });
 
     const conversations = Object.values(conversationsMap).sort(
       (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()

@@ -78,7 +78,7 @@ export const DashboardOwner: React.FC = () => {
 
   // Active sub-dashboard section
   const [activeTab, setActiveTab] = useState<'overview' | 'mygym' | 'facilities' | 'plans' | 'products' | 'orders' | 'updates' | 'payout' | 'messages'>('overview');
-  
+
   // Dashboard records
   const [gym, setGym] = useState<Gym | null>(null);
   const [facilitiesList, setFacilitiesList] = useState<FacilityType[]>([]);
@@ -234,71 +234,86 @@ export const DashboardOwner: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // 1. Fetch facilities list
-      const facs = await apiFetch('/api/gyms/facilities/all');
-      setFacilitiesList(facs || []);
+      // Stage 1: Concurrently fetch facilities list and owner profile
+      const [facsRes, ownerRes] = await Promise.allSettled([
+        apiFetch('/api/gyms/facilities/all'),
+        apiFetch('/api/auth/me')
+      ]);
 
-      // 2. Fetch current owner's gym details
-      const ownerData = await apiFetch('/api/auth/me');
-      if (ownerData.gym) {
-        const gymData = await apiFetch(`/api/gyms/${ownerData.gym.id}`);
-        setGym(gymData);
-        updateUserGym(gymData); // Sync auth state
+      if (facsRes.status === 'fulfilled') {
+        setFacilitiesList(facsRes.value || []);
+      }
 
-        // Initialize My Gym form fields
-        setGymName(gymData.name);
-        setGymDesc(gymData.description);
-        setGymAddress(gymData.address);
-        setGymCity(gymData.city);
-        setGymLat(gymData.latitude);
-        setGymLng(gymData.longitude);
-        setGymPhone(gymData.contactNumber);
-        setGymEmail(gymData.email);
-        setGymLogo(gymData.logo || '');
-        setGymCover(gymData.coverImage || '');
-        setGymHours(gymData.openingHours);
-        setFreeTrialDays(gymData.freeTrialDays || 3);
+      const ownerData = ownerRes.status === 'fulfilled' ? ownerRes.value : null;
 
-        // Payout fields initialization
-        setUpiId(gymData.upiId || '');
-        setBankAccountNumber(gymData.bankAccountNumber || '');
-        setBankIfsc(gymData.bankIfsc || '');
-        setBankAccountName(gymData.bankAccountName || '');
-        setBankName(gymData.bankName || '');
-        setPaymentQrCode(gymData.paymentQrCode || '');
+      if (ownerData && ownerData.gym) {
+        const gymId = ownerData.gym.id;
 
-        // Selected facilities mapping
-        setSelectedFacilities(gymData.facilities.map((gf: any) => gf.facilityId));
+        // Stage 2: Concurrently fetch all gym details, products, subscriptions, orders, conversations, and platform settings
+        const [gymRes, prodsRes, subsRes, ordsRes, convsRes, platSettingsRes] = await Promise.allSettled([
+          apiFetch(`/api/gyms/${gymId}`),
+          apiFetch(`/api/products?gymId=${gymId}`),
+          apiFetch('/api/subscriptions/my'),
+          apiFetch('/api/orders/my'),
+          apiFetch('/api/messages/conversations'),
+          apiFetch('/api/subscriptions/platform-payment')
+        ]);
 
-        // Fetch gym products
-        const prods = await apiFetch(`/api/products?gymId=${gymData.id}`);
-        setProducts(prods || []);
+        if (gymRes.status === 'fulfilled' && gymRes.value) {
+          const gymData = gymRes.value;
+          setGym(gymData);
+          updateUserGym(gymData); // Sync auth state
 
-        // Fetch gym subscriptions
-        const subs = await apiFetch('/api/subscriptions/my');
-        setSubscriptions(subs || []);
+          // Initialize My Gym form fields
+          setGymName(gymData.name);
+          setGymDesc(gymData.description);
+          setGymAddress(gymData.address);
+          setGymCity(gymData.city);
+          setGymLat(gymData.latitude);
+          setGymLng(gymData.longitude);
+          setGymPhone(gymData.contactNumber);
+          setGymEmail(gymData.email);
+          setGymLogo(gymData.logo || '');
+          setGymCover(gymData.coverImage || '');
+          setGymHours(gymData.openingHours);
+          setFreeTrialDays(gymData.freeTrialDays || 3);
 
-        // Fetch gym product orders
-        const ords = await apiFetch('/api/orders/my');
-        setOrders(ords || []);
+          // Payout fields initialization
+          setUpiId(gymData.upiId || '');
+          setBankAccountNumber(gymData.bankAccountNumber || '');
+          setBankIfsc(gymData.bankIfsc || '');
+          setBankAccountName(gymData.bankAccountName || '');
+          setBankName(gymData.bankName || '');
+          setPaymentQrCode(gymData.paymentQrCode || '');
 
-        // Fetch customer conversations
-        try {
-          const convs = await apiFetch('/api/messages/conversations');
-          setOwnerConversations(convs || []);
-        } catch (e) {
-          console.warn('Could not fetch conversations:', e);
+          // Selected facilities mapping
+          if (Array.isArray(gymData.facilities)) {
+            setSelectedFacilities(gymData.facilities.map((gf: any) => gf.facilityId));
+          }
         }
 
-        // Fetch platform settings for subscription renewal
-        try {
-          const platSettings = await apiFetch('/api/subscriptions/platform-payment');
+        if (prodsRes.status === 'fulfilled') {
+          setProducts(prodsRes.value || []);
+        }
+
+        if (subsRes.status === 'fulfilled') {
+          setSubscriptions(subsRes.value || []);
+        }
+
+        if (ordsRes.status === 'fulfilled') {
+          setOrders(ordsRes.value || []);
+        }
+
+        if (convsRes.status === 'fulfilled') {
+          setOwnerConversations(convsRes.value || []);
+        }
+
+        if (platSettingsRes.status === 'fulfilled') {
+          const platSettings = platSettingsRes.value;
           setPlatformSettings(platSettings);
           if (platSettings && platSettings.listingFeeRupees) {
             setSubPayAmount(platSettings.listingFeeRupees.toString());
           }
-        } catch (e) {
-          console.warn('Could not fetch platform settings');
         }
       }
     } catch (err) {
@@ -483,7 +498,7 @@ export const DashboardOwner: React.FC = () => {
   };
 
   const toggleFacilitySelection = (facId: string) => {
-    setSelectedFacilities(prev => 
+    setSelectedFacilities(prev =>
       prev.includes(facId) ? prev.filter(id => id !== facId) : [...prev, facId]
     );
   };
@@ -609,7 +624,7 @@ export const DashboardOwner: React.FC = () => {
 
   // Analytics helper calculations
   const totalRevenue = subscriptions.reduce((acc, sub) => acc + sub.pricePaid, 0) +
-                       orders.reduce((acc, o) => o.status !== 'CANCELLED' ? acc + o.totalPrice : acc, 0);
+    orders.reduce((acc, o) => o.status !== 'CANCELLED' ? acc + o.totalPrice : acc, 0);
 
   const ownerUnreadCount = ownerConversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
@@ -618,39 +633,38 @@ export const DashboardOwner: React.FC = () => {
       <SEO title="Gym Owner Management Center" canonicalPath="/dashboard/owner" noindex={true} />
       {/* Sidebar Nav & Main Panel wrapper */}
       <div className="owner-dashboard-layout">
-        
+
         {/* SIDEBAR TABS */}
         <aside className="dashboard-navigation-sidebar glass-panel">
           <div className="sidebar-brand text-center">
             <Dumbbell className="text-primary" />
             <h3>GYMGO Owner</h3>
             {gym ? (
-              <span 
-                className="badge" 
+              <span
+                className="badge"
                 style={{
-                  background: gym.approvalStatus === 'APPROVED' && gym.isApproved 
-                    ? 'rgba(0, 255, 204, 0.15)' 
-                    : gym.approvalStatus === 'REJECTED' 
-                      ? 'rgba(239, 68, 68, 0.2)' 
+                  background: gym.approvalStatus === 'APPROVED' && gym.isApproved
+                    ? 'rgba(0, 255, 204, 0.15)'
+                    : gym.approvalStatus === 'REJECTED'
+                      ? 'rgba(239, 68, 68, 0.2)'
                       : 'rgba(255, 183, 3, 0.2)',
-                  color: gym.approvalStatus === 'APPROVED' && gym.isApproved 
-                    ? '#00ffcc' 
-                    : gym.approvalStatus === 'REJECTED' 
-                      ? '#ef4444' 
+                  color: gym.approvalStatus === 'APPROVED' && gym.isApproved
+                    ? '#00ffcc'
+                    : gym.approvalStatus === 'REJECTED'
+                      ? '#ef4444'
                       : '#ffb703',
-                  border: `1px solid ${
-                    gym.approvalStatus === 'APPROVED' && gym.isApproved 
-                      ? 'rgba(0,255,204,0.3)' 
-                      : gym.approvalStatus === 'REJECTED' 
-                        ? 'rgba(239,68,68,0.4)' 
+                  border: `1px solid ${gym.approvalStatus === 'APPROVED' && gym.isApproved
+                      ? 'rgba(0,255,204,0.3)'
+                      : gym.approvalStatus === 'REJECTED'
+                        ? 'rgba(239,68,68,0.4)'
                         : 'rgba(255,183,3,0.4)'
-                  }`
+                    }`
                 }}
               >
-                {gym.approvalStatus === 'APPROVED' && gym.isApproved 
-                  ? 'Approved' 
-                  : gym.approvalStatus === 'REJECTED' 
-                    ? 'Needs Revision' 
+                {gym.approvalStatus === 'APPROVED' && gym.isApproved
+                  ? 'Approved'
+                  : gym.approvalStatus === 'REJECTED'
+                    ? 'Needs Revision'
                     : 'Pending Approval'}
               </span>
             ) : (
@@ -659,14 +673,14 @@ export const DashboardOwner: React.FC = () => {
           </div>
 
           <nav className="sidebar-tabs-nav">
-            <button 
-              onClick={() => setActiveTab('overview')} 
+            <button
+              onClick={() => setActiveTab('overview')}
               className={`sidebar-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
             >
               <TrendingUp size={16} /> Overview
             </button>
-            <button 
-              onClick={() => setActiveTab('messages')} 
+            <button
+              onClick={() => setActiveTab('messages')}
               className={`sidebar-tab-btn ${activeTab === 'messages' ? 'active' : ''}`}
             >
               <MessageSquare size={16} /> Member Inquiries
@@ -676,44 +690,44 @@ export const DashboardOwner: React.FC = () => {
                 </span>
               )}
             </button>
-            <button 
-              onClick={() => setActiveTab('mygym')} 
+            <button
+              onClick={() => setActiveTab('mygym')}
               className={`sidebar-tab-btn ${activeTab === 'mygym' ? 'active' : ''}`}
             >
               <Settings size={16} /> My Gym Setup
             </button>
-            <button 
-              onClick={() => setActiveTab('facilities')} 
+            <button
+              onClick={() => setActiveTab('facilities')}
               className={`sidebar-tab-btn ${activeTab === 'facilities' ? 'active' : ''}`}
             >
               <Sparkles size={16} /> Amenities
             </button>
-            <button 
-              onClick={() => setActiveTab('plans')} 
+            <button
+              onClick={() => setActiveTab('plans')}
               className={`sidebar-tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
             >
               <CreditCard size={16} /> Membership Plans
             </button>
-            <button 
-              onClick={() => setActiveTab('products')} 
+            <button
+              onClick={() => setActiveTab('products')}
               className={`sidebar-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
             >
               <ShoppingBag size={16} /> Store & Equipment
             </button>
-            <button 
-              onClick={() => setActiveTab('orders')} 
+            <button
+              onClick={() => setActiveTab('orders')}
               className={`sidebar-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
             >
               <ClipboardList size={16} /> Retail Orders
             </button>
-            <button 
-              onClick={() => setActiveTab('updates')} 
+            <button
+              onClick={() => setActiveTab('updates')}
               className={`sidebar-tab-btn ${activeTab === 'updates' ? 'active' : ''}`}
             >
               <Calendar size={16} /> Gym News/Updates
             </button>
-            <button 
-              onClick={() => setActiveTab('payout')} 
+            <button
+              onClick={() => setActiveTab('payout')}
               className={`sidebar-tab-btn ${activeTab === 'payout' ? 'active' : ''}`}
             >
               <DollarSign size={16} /> Payout & Payment QR
@@ -723,7 +737,7 @@ export const DashboardOwner: React.FC = () => {
 
         {/* MAIN PANEL CONTENT */}
         <main className="owner-main-panel">
-          
+
           {/* TAB: OVERVIEW ANALYTICS */}
           {activeTab === 'overview' && (
             <div className="overview-tab-panel">
@@ -815,7 +829,7 @@ export const DashboardOwner: React.FC = () => {
               </div>
 
               <h2 className="panel-title">Business Analytics</h2>
-              
+
               <div className="analytics-metrics-grid">
                 <div className="metric-card glass-panel">
                   <DollarSign className="metric-icon text-primary" />
@@ -863,7 +877,7 @@ export const DashboardOwner: React.FC = () => {
                         {subscriptions.slice(0, 5).map(sub => (
                           <tr key={sub.id}>
                             <td>
-                              <b>{sub.customer.name}</b><br/>
+                              <b>{sub.customer.name}</b><br />
                               <span className="table-meta-text">{sub.customer.email}</span>
                             </td>
                             <td>{sub.plan.name}</td>
@@ -888,14 +902,14 @@ export const DashboardOwner: React.FC = () => {
           {activeTab === 'mygym' && (
             <div className="mygym-tab-panel glass-panel">
               <h2 className="panel-title">{gym ? 'Edit Gym Profile' : 'Register Gym Profile'}</h2>
-              
+
               <form onSubmit={handleCreateOrUpdateGym} className="mygym-form">
                 <div className="form-row">
                   <div className="form-group">
                     <label>Gym Name</label>
-                    <input 
-                      type="text" 
-                      value={gymName} 
+                    <input
+                      type="text"
+                      value={gymName}
                       onChange={(e) => setGymName(e.target.value)}
                       placeholder="e.g. Iron Gym Vaishali"
                       className="form-control"
@@ -920,7 +934,7 @@ export const DashboardOwner: React.FC = () => {
 
                 <div className="form-group">
                   <label>Gym Tagline/Description</label>
-                  <textarea 
+                  <textarea
                     value={gymDesc}
                     onChange={(e) => setGymDesc(e.target.value)}
                     placeholder="Brief description of training programs, machines, hygiene standards, trainer expertise..."
@@ -933,9 +947,9 @@ export const DashboardOwner: React.FC = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Contact Phone</label>
-                    <input 
-                      type="text" 
-                      value={gymPhone} 
+                    <input
+                      type="text"
+                      value={gymPhone}
                       onChange={(e) => setGymPhone(e.target.value)}
                       placeholder="e.g. +91 98765 43210"
                       className="form-control"
@@ -945,9 +959,9 @@ export const DashboardOwner: React.FC = () => {
 
                   <div className="form-group">
                     <label>Business Email</label>
-                    <input 
-                      type="email" 
-                      value={gymEmail} 
+                    <input
+                      type="email"
+                      value={gymEmail}
                       onChange={(e) => setGymEmail(e.target.value)}
                       placeholder="e.g. goldsvaishali@gmail.com"
                       className="form-control"
@@ -957,9 +971,9 @@ export const DashboardOwner: React.FC = () => {
 
                   <div className="form-group">
                     <label>🎁 Free Trial / Guest Pass Days</label>
-                    <input 
-                      type="number" 
-                      value={freeTrialDays} 
+                    <input
+                      type="number"
+                      value={freeTrialDays}
                       onChange={(e) => setFreeTrialDays(Math.max(0, Number(e.target.value)))}
                       placeholder="e.g. 3"
                       className="form-control"
@@ -994,9 +1008,9 @@ export const DashboardOwner: React.FC = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Opening & Closing Hours</label>
-                    <input 
-                      type="text" 
-                      value={gymHours} 
+                    <input
+                      type="text"
+                      value={gymHours}
                       onChange={(e) => setGymHours(e.target.value)}
                       placeholder="e.g. 05:30 AM - 10:00 PM"
                       className="form-control"
@@ -1006,9 +1020,9 @@ export const DashboardOwner: React.FC = () => {
 
                   <div className="form-group">
                     <label>Address</label>
-                    <input 
-                      type="text" 
-                      value={gymAddress} 
+                    <input
+                      type="text"
+                      value={gymAddress}
                       onChange={(e) => setGymAddress(e.target.value)}
                       placeholder="Plot number, block street name..."
                       className="form-control"
@@ -1071,10 +1085,10 @@ export const DashboardOwner: React.FC = () => {
                 </div>
 
                 <button type="submit" className="glow-btn save-gym-btn">
-                  {gym?.approvalStatus === 'REJECTED' 
-                    ? 'Save & Resubmit for Admin Approval' 
-                    : gym 
-                      ? 'Update Gym Profile' 
+                  {gym?.approvalStatus === 'REJECTED'
+                    ? 'Save & Resubmit for Admin Approval'
+                    : gym
+                      ? 'Update Gym Profile'
                       : 'Submit Gym for Admin Approval'}
                 </button>
               </form>
@@ -1103,7 +1117,7 @@ export const DashboardOwner: React.FC = () => {
                   {facilitiesList.map(fac => {
                     const isChecked = selectedFacilities.includes(fac.id);
                     return (
-                      <div 
+                      <div
                         key={fac.id}
                         onClick={() => toggleFacilitySelection(fac.id)}
                         className={`facility-select-item glass-card ${isChecked ? 'selected' : ''}`}
@@ -1118,10 +1132,10 @@ export const DashboardOwner: React.FC = () => {
                           }
                         }}
                       >
-                        <input 
+                        <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => {}} // Controlled by div onClick
+                          onChange={() => { }} // Controlled by div onClick
                           style={{ display: 'none' }}
                         />
                         <span className="checkbox-box flex-center">
@@ -1135,8 +1149,8 @@ export const DashboardOwner: React.FC = () => {
                   })}
                 </div>
 
-                <button 
-                  onClick={handleFacilitiesUpdate} 
+                <button
+                  onClick={handleFacilitiesUpdate}
                   className="glow-btn save-facilities-btn"
                   style={{ marginTop: '2rem' }}
                 >
@@ -1163,103 +1177,103 @@ export const DashboardOwner: React.FC = () => {
               <div className="plans-tab-panel">
                 <div className="dashboard-block-panel glass-panel">
                   <h2 className="panel-title">Add Membership Plan</h2>
-                <form onSubmit={handleAddPlan} className="add-plan-form">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Plan Name</label>
-                      <input 
-                        type="text" 
-                        value={planName} 
-                        onChange={(e) => setPlanName(e.target.value)}
-                        placeholder="e.g. Pro Quarterly Package"
-                        className="form-control"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Price (₹)</label>
-                      <input 
-                        type="number" 
-                        value={planPrice} 
-                        onChange={(e) => setPlanPrice(e.target.value)}
-                        placeholder="e.g. 2999"
-                        className="form-control"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Duration (Days)</label>
-                      <select 
-                        value={planDays} 
-                        onChange={(e) => setPlanDays(e.target.value)}
-                        className="form-control"
-                      >
-                        <option value="30">30 Days (Monthly)</option>
-                        <option value="90">90 Days (Quarterly)</option>
-                        <option value="180">180 Days (Half-Yearly)</option>
-                        <option value="365">365 Days (Annual)</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Features / Amenities Included (Comma-separated)</label>
-                      <input 
-                        type="text" 
-                        value={planFeatures} 
-                        onChange={(e) => setPlanFeatures(e.target.value)}
-                        placeholder="Gym Access, Cardio Area, 1x Free Shaker Bottle, Locker Access"
-                        className="form-control"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Package Description</label>
-                    <textarea
-                      value={planDesc}
-                      onChange={(e) => setPlanDesc(e.target.value)}
-                      placeholder="Describe restrictions, specialized trainers availability, steam bath access limits..."
-                      rows={2}
-                      className="form-control"
-                    ></textarea>
-                  </div>
-
-                  <button type="submit" className="glow-btn">
-                    Create & Publish Package
-                  </button>
-                </form>
-              </div>
-
-              {/* Published plans list */}
-              <div className="dashboard-block-panel glass-panel" style={{ marginTop: '2rem' }}>
-                <h2>Active Packages</h2>
-                {gym?.plans.length === 0 ? (
-                  <p className="text-muted text-center" style={{ padding: '2rem 0' }}>No membership plans active.</p>
-                ) : (
-                  <div className="plans-owner-list">
-                    {gym?.plans.map(p => (
-                      <div key={p.id} className="plan-owner-row glass-card">
-                        <div>
-                          <h4>{p.name}</h4>
-                          <span className="price-bold">₹{p.price}</span>
-                          <span className="text-muted"> / {p.durationDays} Days</span>
-                        </div>
-                        <button 
-                          onClick={() => handleDeletePlan(p.id)}
-                          className="btn-secondary delete-plan-btn"
-                          style={{ color: 'var(--status-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                        >
-                          <Trash2 size={16} /> Delete
-                        </button>
+                  <form onSubmit={handleAddPlan} className="add-plan-form">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Plan Name</label>
+                        <input
+                          type="text"
+                          value={planName}
+                          onChange={(e) => setPlanName(e.target.value)}
+                          placeholder="e.g. Pro Quarterly Package"
+                          className="form-control"
+                          required
+                        />
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="form-group">
+                        <label>Price (₹)</label>
+                        <input
+                          type="number"
+                          value={planPrice}
+                          onChange={(e) => setPlanPrice(e.target.value)}
+                          placeholder="e.g. 2999"
+                          className="form-control"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Duration (Days)</label>
+                        <select
+                          value={planDays}
+                          onChange={(e) => setPlanDays(e.target.value)}
+                          className="form-control"
+                        >
+                          <option value="30">30 Days (Monthly)</option>
+                          <option value="90">90 Days (Quarterly)</option>
+                          <option value="180">180 Days (Half-Yearly)</option>
+                          <option value="365">365 Days (Annual)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Features / Amenities Included (Comma-separated)</label>
+                        <input
+                          type="text"
+                          value={planFeatures}
+                          onChange={(e) => setPlanFeatures(e.target.value)}
+                          placeholder="Gym Access, Cardio Area, 1x Free Shaker Bottle, Locker Access"
+                          className="form-control"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Package Description</label>
+                      <textarea
+                        value={planDesc}
+                        onChange={(e) => setPlanDesc(e.target.value)}
+                        placeholder="Describe restrictions, specialized trainers availability, steam bath access limits..."
+                        rows={2}
+                        className="form-control"
+                      ></textarea>
+                    </div>
+
+                    <button type="submit" className="glow-btn">
+                      Create & Publish Package
+                    </button>
+                  </form>
+                </div>
+
+                {/* Published plans list */}
+                <div className="dashboard-block-panel glass-panel" style={{ marginTop: '2rem' }}>
+                  <h2>Active Packages</h2>
+                  {gym?.plans.length === 0 ? (
+                    <p className="text-muted text-center" style={{ padding: '2rem 0' }}>No membership plans active.</p>
+                  ) : (
+                    <div className="plans-owner-list">
+                      {gym?.plans.map(p => (
+                        <div key={p.id} className="plan-owner-row glass-card">
+                          <div>
+                            <h4>{p.name}</h4>
+                            <span className="price-bold">₹{p.price}</span>
+                            <span className="text-muted"> / {p.durationDays} Days</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeletePlan(p.id)}
+                            className="btn-secondary delete-plan-btn"
+                            style={{ color: 'var(--status-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                          >
+                            <Trash2 size={16} /> Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
             )
           )}
 
@@ -1280,14 +1294,14 @@ export const DashboardOwner: React.FC = () => {
               <div className="products-tab-panel">
                 <div className="dashboard-block-panel glass-panel">
                   <h2>Add Product / Equipment to E-Store</h2>
-                  
+
                   <form onSubmit={handleAddProduct} className="add-product-form">
                     <div className="form-row">
                       <div className="form-group">
                         <label>Product / Equipment Name</label>
-                        <input 
-                          type="text" 
-                          value={prodName} 
+                        <input
+                          type="text"
+                          value={prodName}
                           onChange={(e) => setProdName(e.target.value)}
                           placeholder="e.g. Hex Dumbbell Set 10kg or Weightlifting Belt"
                           className="form-control"
@@ -1296,8 +1310,8 @@ export const DashboardOwner: React.FC = () => {
                       </div>
                       <div className="form-group">
                         <label>Category</label>
-                        <select 
-                          value={prodCategory} 
+                        <select
+                          value={prodCategory}
                           onChange={(e) => setProdCategory(e.target.value)}
                           className="form-control"
                         >
@@ -1309,107 +1323,107 @@ export const DashboardOwner: React.FC = () => {
                       </div>
                     </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Price (₹)</label>
-                      <input 
-                        type="number" 
-                        value={prodPrice} 
-                        onChange={(e) => setProdPrice(e.target.value)}
-                        placeholder="e.g. 899"
-                        className="form-control"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Discount percentage (%)</label>
-                      <input 
-                        type="number" 
-                        value={prodDiscount} 
-                        onChange={(e) => setProdDiscount(e.target.value)}
-                        placeholder="e.g. 15 (for 15% off)"
-                        className="form-control"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Stock Quantity Available</label>
-                      <input 
-                        type="number" 
-                        value={prodStock} 
-                        onChange={(e) => setProdStock(e.target.value)}
-                        placeholder="e.g. 15"
-                        className="form-control"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <ImageInput
-                        label="Product Image"
-                        value={prodImage}
-                        onChange={(url) => setProdImage(url)}
-                        placeholder="Paste Image URL, Google Drive link, or upload local file..."
-                        helpText="Supports Google Drive share links & local saved file uploads"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Description</label>
-                    <textarea 
-                      value={prodDesc} 
-                      onChange={(e) => setProdDesc(e.target.value)}
-                      placeholder="Size, materials quality, dimensions weight, washing/care instructions..."
-                      rows={2}
-                      className="form-control"
-                    ></textarea>
-                  </div>
-
-                  <button type="submit" className="glow-btn">
-                    List Product
-                  </button>
-                </form>
-              </div>
-
-              {/* Listed Products list */}
-              <div className="dashboard-block-panel glass-panel" style={{ marginTop: '2rem' }}>
-                <h2>Listed Products</h2>
-                {products.length === 0 ? (
-                  <p className="text-muted text-center" style={{ padding: '2rem 0' }}>No products listed yet.</p>
-                ) : (
-                  <div className="owner-product-rows-list">
-                    {products.map(prod => (
-                      <div key={prod.id} className="plan-owner-row glass-card">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <img 
-                            src={prod.image} 
-                            alt={`${prod.name} product thumbnail`} 
-                            width={48}
-                            height={48}
-                            loading="lazy"
-                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }} 
-                          />
-                          <div>
-                            <h4>{prod.name}</h4>
-                            <span className="price-bold">₹{prod.price}</span>
-                            <span className="text-muted"> (Stock: {prod.stock} | Discount: {prod.discount}%)</span>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteProduct(prod.id)}
-                          className="btn-secondary delete-plan-btn"
-                          style={{ color: 'var(--status-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                        >
-                          <Trash2 size={16} /> Delete
-                        </button>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Price (₹)</label>
+                        <input
+                          type="number"
+                          value={prodPrice}
+                          onChange={(e) => setProdPrice(e.target.value)}
+                          placeholder="e.g. 899"
+                          className="form-control"
+                          required
+                        />
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="form-group">
+                        <label>Discount percentage (%)</label>
+                        <input
+                          type="number"
+                          value={prodDiscount}
+                          onChange={(e) => setProdDiscount(e.target.value)}
+                          placeholder="e.g. 15 (for 15% off)"
+                          className="form-control"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Stock Quantity Available</label>
+                        <input
+                          type="number"
+                          value={prodStock}
+                          onChange={(e) => setProdStock(e.target.value)}
+                          placeholder="e.g. 15"
+                          className="form-control"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <ImageInput
+                          label="Product Image"
+                          value={prodImage}
+                          onChange={(url) => setProdImage(url)}
+                          placeholder="Paste Image URL, Google Drive link, or upload local file..."
+                          helpText="Supports Google Drive share links & local saved file uploads"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Description</label>
+                      <textarea
+                        value={prodDesc}
+                        onChange={(e) => setProdDesc(e.target.value)}
+                        placeholder="Size, materials quality, dimensions weight, washing/care instructions..."
+                        rows={2}
+                        className="form-control"
+                      ></textarea>
+                    </div>
+
+                    <button type="submit" className="glow-btn">
+                      List Product
+                    </button>
+                  </form>
+                </div>
+
+                {/* Listed Products list */}
+                <div className="dashboard-block-panel glass-panel" style={{ marginTop: '2rem' }}>
+                  <h2>Listed Products</h2>
+                  {products.length === 0 ? (
+                    <p className="text-muted text-center" style={{ padding: '2rem 0' }}>No products listed yet.</p>
+                  ) : (
+                    <div className="owner-product-rows-list">
+                      {products.map(prod => (
+                        <div key={prod.id} className="plan-owner-row glass-card">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <img
+                              src={prod.image}
+                              alt={`${prod.name} product thumbnail`}
+                              width={48}
+                              height={48}
+                              loading="lazy"
+                              style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }}
+                            />
+                            <div>
+                              <h4>{prod.name}</h4>
+                              <span className="price-bold">₹{prod.price}</span>
+                              <span className="text-muted"> (Stock: {prod.stock} | Discount: {prod.discount}%)</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteProduct(prod.id)}
+                            className="btn-secondary delete-plan-btn"
+                            style={{ color: 'var(--status-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                          >
+                            <Trash2 size={16} /> Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
             )
           )}
 
@@ -1429,7 +1443,7 @@ export const DashboardOwner: React.FC = () => {
             ) : (
               <div className="orders-tab-panel glass-panel">
                 <h2 className="panel-title">Customer Store Orders</h2>
-                
+
                 {orders.length === 0 ? (
                   <p className="text-muted text-center" style={{ padding: '3rem 0' }}>No orders placed for your store yet.</p>
                 ) : (
@@ -1442,7 +1456,7 @@ export const DashboardOwner: React.FC = () => {
                             <p className="order-date">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
                             <p className="customer-meta">Customer: <b>{order.customerName}</b> ({order.customerEmail})</p>
                           </div>
-                          
+
                           <div className="status-updater-row">
                             <label>Status: </label>
                             <select
@@ -1502,13 +1516,13 @@ export const DashboardOwner: React.FC = () => {
                 <div className="dashboard-block-panel glass-panel">
                   <h2>Publish Gym News Update</h2>
                   <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>Broadcasting a post will notify all your active members automatically.</p>
-                  
+
                   <form onSubmit={handlePublishUpdate} className="add-update-form">
                     <div className="form-group">
                       <label>Update Title</label>
-                      <input 
-                        type="text" 
-                        value={updateTitle} 
+                      <input
+                        type="text"
+                        value={updateTitle}
                         onChange={(e) => setUpdateTitle(e.target.value)}
                         placeholder="e.g. New Squat Cages Added / Holi Holiday Operating Hours"
                         className="form-control"
@@ -1518,8 +1532,8 @@ export const DashboardOwner: React.FC = () => {
 
                     <div className="form-group">
                       <label>Post Body Content</label>
-                      <textarea 
-                        value={updateDesc} 
+                      <textarea
+                        value={updateDesc}
                         onChange={(e) => setUpdateDesc(e.target.value)}
                         placeholder="Describe the news in detail..."
                         rows={4}
@@ -1562,94 +1576,94 @@ export const DashboardOwner: React.FC = () => {
               </div>
             ) : (
               <div className="payout-tab-panel">
-              <h2 className="panel-title">Payment Collection & Payout Setup</h2>
-              <p className="section-subtitle" style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                Configure your Bank Account, UPI ID, and Payment QR Code. Customers purchasing products or joining your gym can transfer funds directly to your accounts!
-              </p>
+                <h2 className="panel-title">Payment Collection & Payout Setup</h2>
+                <p className="section-subtitle" style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                  Configure your Bank Account, UPI ID, and Payment QR Code. Customers purchasing products or joining your gym can transfer funds directly to your accounts!
+                </p>
 
-              <div className="dashboard-block-panel glass-panel">
-                <form onSubmit={handleSavePayoutDetails} className="mygym-form">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                    <div className="form-group">
-                      <label className="form-label">UPI ID (Google Pay / PhonePe / Paytm)</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        placeholder="e.g. yourname@upi or 9876543210@paytm"
+                <div className="dashboard-block-panel glass-panel">
+                  <form onSubmit={handleSavePayoutDetails} className="mygym-form">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                      <div className="form-group">
+                        <label className="form-label">UPI ID (Google Pay / PhonePe / Paytm)</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={upiId}
+                          onChange={(e) => setUpiId(e.target.value)}
+                          placeholder="e.g. yourname@upi or 9876543210@paytm"
+                        />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Direct UPI handle for customer scanning/payments</span>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Bank Account Holder Name</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={bankAccountName}
+                          onChange={(e) => setBankAccountName(e.target.value)}
+                          placeholder="Legal Account Holder Name"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Bank Name</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          placeholder="e.g. State Bank of India, HDFC, ICICI"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Bank Account Number</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={bankAccountNumber}
+                          onChange={(e) => setBankAccountNumber(e.target.value)}
+                          placeholder="Account Number"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">IFSC Code</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={bankIfsc}
+                          onChange={(e) => setBankIfsc(e.target.value)}
+                          placeholder="e.g. SBIN0001234"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: '1rem' }}>
+                      <ImageInput
+                        label="Payment QR Code Image"
+                        value={paymentQrCode}
+                        onChange={(url) => setPaymentQrCode(url)}
+                        placeholder="Paste QR Code URL or upload local payment QR image..."
+                        helpText="Upload your Google Pay / PhonePe / Paytm QR Code image for direct customer scanning"
                       />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Direct UPI handle for customer scanning/payments</span>
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Bank Account Holder Name</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        value={bankAccountName}
-                        onChange={(e) => setBankAccountName(e.target.value)}
-                        placeholder="Legal Account Holder Name"
-                      />
-                    </div>
+                    {paymentQrCode && (
+                      <div style={{ textAlign: 'center', padding: '1rem', background: '#0b0d10', borderRadius: '8px', border: '1px solid var(--border-color)', maxWidth: '240px' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Active Payment QR Preview:</span>
+                        <img src={paymentQrCode} alt="Gym Owner Payment QR Code" width={200} height={200} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
+                      </div>
+                    )}
 
-                    <div className="form-group">
-                      <label className="form-label">Bank Name</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        value={bankName}
-                        onChange={(e) => setBankName(e.target.value)}
-                        placeholder="e.g. State Bank of India, HDFC, ICICI"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">Bank Account Number</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        value={bankAccountNumber}
-                        onChange={(e) => setBankAccountNumber(e.target.value)}
-                        placeholder="Account Number"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">IFSC Code</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        value={bankIfsc}
-                        onChange={(e) => setBankIfsc(e.target.value)}
-                        placeholder="e.g. SBIN0001234"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group" style={{ marginTop: '1rem' }}>
-                    <ImageInput
-                      label="Payment QR Code Image"
-                      value={paymentQrCode}
-                      onChange={(url) => setPaymentQrCode(url)}
-                      placeholder="Paste QR Code URL or upload local payment QR image..."
-                      helpText="Upload your Google Pay / PhonePe / Paytm QR Code image for direct customer scanning"
-                    />
-                  </div>
-
-                  {paymentQrCode && (
-                    <div style={{ textAlign: 'center', padding: '1rem', background: '#0b0d10', borderRadius: '8px', border: '1px solid var(--border-color)', maxWidth: '240px' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Active Payment QR Preview:</span>
-                      <img src={paymentQrCode} alt="Gym Owner Payment QR Code" width={200} height={200} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
-                    </div>
-                  )}
-
-                  <button type="submit" className="glow-btn" disabled={savingPayout} style={{ marginTop: '1rem' }}>
-                    {savingPayout ? 'Saving Payout Details...' : 'Save Payout & QR Settings'}
-                  </button>
-                </form>
+                    <button type="submit" className="glow-btn" disabled={savingPayout} style={{ marginTop: '1rem' }}>
+                      {savingPayout ? 'Saving Payout Details...' : 'Save Payout & QR Settings'}
+                    </button>
+                  </form>
+                </div>
               </div>
-            </div>
             )
           )}
 
@@ -1663,8 +1677,8 @@ export const DashboardOwner: React.FC = () => {
                     Direct questions from potential gym members and active pass holders about timings, facilities, and personal training.
                   </p>
                 </div>
-                <button 
-                  onClick={() => navigate('/chat')} 
+                <button
+                  onClick={() => navigate('/chat')}
                   className="glow-btn flex-center"
                   style={{ gap: '0.5rem', fontSize: '0.85rem' }}
                 >
@@ -1683,25 +1697,25 @@ export const DashboardOwner: React.FC = () => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {ownerConversations.map(conv => (
-                    <div 
-                      key={conv.otherUser.id} 
-                      className="glass-card" 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between', 
-                        padding: '1.25rem', 
+                    <div
+                      key={conv.otherUser.id}
+                      className="glass-card"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '1.25rem',
                         borderRadius: '10px',
                         border: conv.unreadCount > 0 ? '1px solid rgba(0, 255, 204, 0.4)' : '1px solid var(--border-color)',
                         background: conv.unreadCount > 0 ? 'rgba(0, 255, 204, 0.04)' : undefined
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <img 
-                          src={conv.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'} 
-                          alt={conv.otherUser.name} 
-                          width={48} 
-                          height={48} 
+                        <img
+                          src={conv.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'}
+                          alt={conv.otherUser.name}
+                          width={48}
+                          height={48}
                           style={{ borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }}
                         />
                         <div>
@@ -1725,7 +1739,7 @@ export const DashboardOwner: React.FC = () => {
                         </div>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => navigate(`/chat?userId=${conv.otherUser.id}`, { state: { startChatWith: conv.otherUser } })}
                         className="glow-btn"
                         style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
@@ -1783,17 +1797,17 @@ export const DashboardOwner: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Transaction ID / UTR Number</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      value={subPayTxId} 
-                      onChange={(e) => setSubPayTxId(e.target.value)} 
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={subPayTxId}
+                      onChange={(e) => setSubPayTxId(e.target.value)}
                       placeholder="e.g. UTR 425619873012 or UPI Ref ID"
                     />
                   </div>
 
                   <div className="form-group">
-                    <ImageInput 
+                    <ImageInput
                       label="Payment Receipt Screenshot URL / Upload"
                       value={subPayProofUrl}
                       onChange={(url) => setSubPayProofUrl(url)}

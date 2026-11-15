@@ -164,7 +164,7 @@ router.get('/', async (req, res) => {
 
     // Client-side facility filter
     if (facility) {
-      filteredGyms = filteredGyms.filter(gym => 
+      filteredGyms = filteredGyms.filter(gym =>
         gym.facilities.some(gf => gf.facility?.name?.toLowerCase() === facility.toString().toLowerCase())
       );
     }
@@ -438,7 +438,7 @@ router.put('/:id/approve', verifyToken, requireRole(['ADMIN']), async (req, res)
 
     const gym = await prisma.gym.update({
       where: { id },
-      data: { 
+      data: {
         isApproved: true,
         approvalStatus: 'APPROVED',
         rejectionReason: null,
@@ -470,8 +470,8 @@ router.put('/:id/reject', verifyToken, requireRole(['ADMIN']), async (req, res) 
   const { rejectionReason } = req.body;
 
   if (!rejectionReason || typeof rejectionReason !== 'string' || rejectionReason.trim().length < 10) {
-    return res.status(400).json({ 
-      error: 'A detailed rejection reason is mandatory (minimum 10 characters) explaining what needs improvement.' 
+    return res.status(400).json({
+      error: 'A detailed rejection reason is mandatory (minimum 10 characters) explaining what needs improvement.'
     });
   }
 
@@ -487,7 +487,7 @@ router.put('/:id/reject', verifyToken, requireRole(['ADMIN']), async (req, res) 
 
     const gym = await prisma.gym.update({
       where: { id },
-      data: { 
+      data: {
         isApproved: false,
         approvalStatus: 'REJECTED',
         rejectionReason: rejectionReason.trim(),

@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { Navbar } from './components/Navbar';
-import { CustomerSupportChatbot } from './components/CustomerSupportChatbot';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Route-level code splitting via React.lazy for sub-second FCP and low TBT
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -18,6 +18,9 @@ const DashboardCustomer = lazy(() => import('./pages/DashboardCustomer').then(m 
 const DashboardOwner = lazy(() => import('./pages/DashboardOwner').then(m => ({ default: m.DashboardOwner })));
 const DashboardAdmin = lazy(() => import('./pages/DashboardAdmin').then(m => ({ default: m.DashboardAdmin })));
 const DashboardEmployee = lazy(() => import('./pages/DashboardEmployee').then(m => ({ default: m.DashboardEmployee })));
+
+// Non-critical global widgets lazy-loaded to prevent initial bundle bloat
+const CustomerSupportChatbot = lazy(() => import('./components/CustomerSupportChatbot').then(m => ({ default: m.CustomerSupportChatbot })));
 
 // Accessible Route Loading Skeleton
 const PageFallback: React.FC = () => (
@@ -40,30 +43,34 @@ export const App: React.FC = () => {
           <Navbar />
           
           <main id="main-content" className="main-content-viewport" role="main" tabIndex={-1}>
-            <Suspense fallback={<PageFallback />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/gyms" element={<GymDiscovery />} />
-                <Route path="/gym-near-me" element={<GymDiscovery />} />
-                <Route path="/gyms/:id" element={<GymDetails />} />
-                <Route path="/gym/:id" element={<GymDetails />} />
-                <Route path="/gym/:gymId" element={<GymDetails />} />
-                <Route path="/store" element={<GymStore />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/dashboard/customer" element={<DashboardCustomer />} />
-                <Route path="/dashboard/owner" element={<DashboardOwner />} />
-                <Route path="/dashboard/admin" element={<DashboardAdmin />} />
-                <Route path="/dashboard/employee" element={<DashboardEmployee />} />
-              </Routes>
-            </Suspense>
+            <ErrorBoundary fallbackTitle="Page Load Error">
+              <Suspense fallback={<PageFallback />}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/gyms" element={<GymDiscovery />} />
+                  <Route path="/gym-near-me" element={<GymDiscovery />} />
+                  <Route path="/gyms/:id" element={<GymDetails />} />
+                  <Route path="/gym/:id" element={<GymDetails />} />
+                  <Route path="/gym/:gymId" element={<GymDetails />} />
+                  <Route path="/store" element={<GymStore />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/dashboard/customer" element={<DashboardCustomer />} />
+                  <Route path="/dashboard/owner" element={<DashboardOwner />} />
+                  <Route path="/dashboard/admin" element={<DashboardAdmin />} />
+                  <Route path="/dashboard/employee" element={<DashboardEmployee />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </main>
 
-          {/* Global Customer Support Chatbot Widget */}
-          <CustomerSupportChatbot />
+          {/* Global Customer Support Chatbot Widget (Deferred) */}
+          <Suspense fallback={null}>
+            <CustomerSupportChatbot />
+          </Suspense>
         </div>
       </Router>
     </CurrencyProvider>

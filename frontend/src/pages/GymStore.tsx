@@ -28,13 +28,22 @@ export const GymStore: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+
+  // Debounce search query changes by 300ms to avoid hammering backend on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const query = new URLSearchParams();
-      if (searchQuery) query.append('search', searchQuery);
+      if (debouncedSearchQuery.trim()) query.append('search', debouncedSearchQuery.trim());
       if (selectedCategory !== 'ALL') query.append('category', selectedCategory);
 
       const data = await apiFetch(`/api/products?${query.toString()}`);
@@ -48,7 +57,7 @@ export const GymStore: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, debouncedSearchQuery]);
 
   const getDiscountedPrice = (price: number, discount: number) => {
     return (price * (1 - discount / 100)).toFixed(2);

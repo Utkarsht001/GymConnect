@@ -38,7 +38,7 @@ export const GymDiscovery: React.FC = () => {
   const { apiFetch } = useAuth();
   const { formatPrice } = useCurrency();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // States
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [facilitiesList, setFacilitiesList] = useState<FacilityType[]>([]);
@@ -155,7 +155,7 @@ export const GymDiscovery: React.FC = () => {
     // Initialize map if it doesn't exist
     if (!mapInstance.current) {
       mapInstance.current = L.map(mapRef.current).setView([26.9124, 75.7873], 12);
-      
+
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(mapInstance.current);
@@ -220,7 +220,7 @@ export const GymDiscovery: React.FC = () => {
 
             const marker = L.marker([gym.latitude, gym.longitude])
               .bindPopup(popupContent);
-            
+
             markersGroup.current?.addLayer(marker);
             bounds.push([gym.latitude, gym.longitude]);
           }
@@ -261,7 +261,7 @@ export const GymDiscovery: React.FC = () => {
 
   return (
     <div className="discovery-page-container">
-      <SEO 
+      <SEO
         title="Find Gyms Near You - Interactive Map & Pricing"
         description="Search, filter, and compare verified fitness centers in Jaipur and other cities. View live amenities, monthly membership prices, and trainer ratings on Leaflet OpenStreetMap."
         canonicalPath="/gyms"
@@ -273,11 +273,11 @@ export const GymDiscovery: React.FC = () => {
           <div className="search-input-wrapper">
             <label htmlFor="discovery-search-field" className="sr-only">Search gyms by title, address, specialties</label>
             <Search className="search-icon" aria-hidden="true" />
-            <input 
+            <input
               id="discovery-search-field"
               name="search"
-              type="search" 
-              placeholder="Search gyms by title, address, specialties..." 
+              type="search"
+              placeholder="Search gyms by title, address, specialties..."
               value={searchInput}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="search-input-field"
@@ -317,8 +317,8 @@ export const GymDiscovery: React.FC = () => {
             {userLocation ? 'Location Active (Nearest First)' : 'Find Gyms Near Me'}
           </button>
 
-          <button 
-            onClick={() => setShowFiltersMobile(!showFiltersMobile)} 
+          <button
+            onClick={() => setShowFiltersMobile(!showFiltersMobile)}
             className="filter-toggle-mobile btn-secondary"
             aria-label="Toggle filter options panel"
             aria-expanded={showFiltersMobile}
@@ -332,13 +332,13 @@ export const GymDiscovery: React.FC = () => {
       <div className="split-viewport">
         {/* LEFT COLUMN: FILTERS & LISTINGS */}
         <div className={`listings-column ${mobileView === 'list' ? 'active' : ''}`}>
-          
+
           {/* Filters Panel (Desktop Sidebar / Mobile Modal) */}
           <aside className={`filters-sidebar glass-panel ${showFiltersMobile ? 'show' : ''}`} aria-label="Gym search filters">
             <div className="sidebar-header">
               <h3>Filter Options</h3>
-              <button 
-                onClick={() => setShowFiltersMobile(false)} 
+              <button
+                onClick={() => setShowFiltersMobile(false)}
                 className="close-filters-btn"
                 aria-label="Close filters drawer"
               >
@@ -368,11 +368,11 @@ export const GymDiscovery: React.FC = () => {
               <span className="filter-group-title" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Price Range (Monthly)</span>
               <div className="price-inputs">
                 <label htmlFor="min-price-input" className="sr-only">Minimum monthly price</label>
-                <input 
+                <input
                   id="min-price-input"
                   name="minPrice"
-                  type="number" 
-                  placeholder="Min" 
+                  type="number"
+                  placeholder="Min"
                   value={minPriceInput}
                   onChange={(e) => handleFilterChange('minPrice', e.target.value)}
                   className="form-control"
@@ -380,11 +380,11 @@ export const GymDiscovery: React.FC = () => {
                 />
                 <span aria-hidden="true">-</span>
                 <label htmlFor="max-price-input" className="sr-only">Maximum monthly price</label>
-                <input 
+                <input
                   id="max-price-input"
                   name="maxPrice"
-                  type="number" 
-                  placeholder="Max" 
+                  type="number"
+                  placeholder="Max"
                   value={maxPriceInput}
                   onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
                   className="form-control"
@@ -409,8 +409,8 @@ export const GymDiscovery: React.FC = () => {
               </select>
             </div>
 
-            <button 
-              onClick={clearFilters} 
+            <button
+              onClick={clearFilters}
               className="btn-secondary clear-filters-btn"
               aria-label="Reset all search filters"
             >
@@ -439,16 +439,16 @@ export const GymDiscovery: React.FC = () => {
                 {gyms.map(gym => (
                   <article key={gym.id} className="gym-card-redesign glass-panel">
                     {/* 1. Clickable Image Container */}
-                    <Link 
-                      to={`/gyms/${gym.id}`} 
+                    <Link
+                      to={`/gyms/${gym.id}`}
                       className="gym-card-image-link"
                       aria-label={`View ${gym.name} profile and facilities`}
                     >
                       <div className="gym-card-image-wrapper">
-                        <img 
-                          src={gym.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=75'} 
-                          alt={`${gym.name} facility`} 
-                          className="gym-card-cover-img" 
+                        <img
+                          src={gym.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=75'}
+                          alt={`${gym.name} facility`}
+                          className="gym-card-cover-img"
                           loading="lazy"
                           decoding="async"
                           width={280}
@@ -470,15 +470,15 @@ export const GymDiscovery: React.FC = () => {
                       {/* Header with Logo, Title, Badges */}
                       <div className="gym-card-top">
                         <div className="gym-card-identity">
-                          <Link 
-                            to={`/gyms/${gym.id}`} 
+                          <Link
+                            to={`/gyms/${gym.id}`}
                             className="gym-card-logo-link"
                             aria-label={`View ${gym.name} logo`}
                           >
-                            <img 
-                              src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=80&q=75'} 
-                              alt={`${gym.name} logo`} 
-                              className="gym-card-logo" 
+                            <img
+                              src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=80&q=75'}
+                              alt={`${gym.name} logo`}
+                              className="gym-card-logo"
                               loading="lazy"
                               decoding="async"
                               width={44}
@@ -487,8 +487,8 @@ export const GymDiscovery: React.FC = () => {
                           </Link>
                           <div className="gym-card-headings">
                             <div className="gym-title-row">
-                              <Link 
-                                to={`/gyms/${gym.id}`} 
+                              <Link
+                                to={`/gyms/${gym.id}`}
                                 className="gym-card-title-link"
                                 title={`View ${gym.name}`}
                               >
@@ -540,8 +540,8 @@ export const GymDiscovery: React.FC = () => {
                           </div>
                         </div>
 
-                        <Link 
-                          to={`/gyms/${gym.id}`} 
+                        <Link
+                          to={`/gyms/${gym.id}`}
                           className="glow-btn gym-view-details-btn"
                           aria-label={`View details and membership plans for ${gym.name}`}
                         >
@@ -565,15 +565,15 @@ export const GymDiscovery: React.FC = () => {
 
       {/* MOBILE TOGGLE FOOTER BAR (Switch between List & Map views) */}
       <div className="mobile-toggle-footer glass-panel">
-        <button 
-          onClick={() => setMobileView('list')} 
+        <button
+          onClick={() => setMobileView('list')}
           className={`toggle-tab-btn ${mobileView === 'list' ? 'active' : ''}`}
           aria-label="Switch to gym list view"
         >
           <ListIcon size={18} aria-hidden="true" /> List View
         </button>
-        <button 
-          onClick={() => setMobileView('map')} 
+        <button
+          onClick={() => setMobileView('map')}
           className={`toggle-tab-btn ${mobileView === 'map' ? 'active' : ''}`}
           aria-label="Switch to interactive map view"
         >

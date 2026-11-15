@@ -79,11 +79,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const API_BASE_URL = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace(/\/+$/, '') 
       : (import.meta.env.DEV ? 'http://localhost:5000' : 'https://gym-connect-8xvg.vercel.app');
+
+    // 15-second timeout prevention for serverless/cold starts
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const signal = options.signal || controller.signal;
+
     try {
       const response = await fetch(`${API_BASE_URL}${url}`, {
         ...options,
-        headers
+        headers,
+        signal
       });
+      clearTimeout(timeoutId);
 
       const contentType = response.headers.get('content-type');
       let data: any = {};
@@ -99,8 +107,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return data;
     } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('Request timed out. Please check your network connection and retry.');
+      }
       if (err.name === 'TypeError' && err.message?.includes('fetch')) {
-        throw new Error('Unable to connect to backend server. Please make sure the backend server (port 5000) is running.');
+        throw new Error('Unable to connect to GymConnect servers. Please retry in a moment.');
       }
       throw err;
     }

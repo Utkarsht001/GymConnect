@@ -187,31 +187,39 @@ export const Home: React.FC = () => {
           <div className="grid-responsive">
             {gyms.map(gym => (
               <article key={gym.id} className="gym-card glass-card">
-                <div className="gym-card-image-wrapper">
-                  <img 
-                    src={gym.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=75'} 
-                    alt={`${gym.name} facility and workout floor`} 
-                    className="gym-card-img" 
-                    loading="lazy"
-                    decoding="async"
-                    width={350}
-                    height={200}
-                  />
-                  <span className="price-tag">Starts at {getStartingPrice(gym.plans)}/mo</span>
-                </div>
-                <div className="gym-card-body">
-                  <div className="gym-card-header">
+                <Link to={`/gyms/${gym.id}`} aria-label={`View details for ${gym.name}`} style={{ display: 'block', textDecoration: 'none' }}>
+                  <div className="gym-card-image-wrapper">
                     <img 
-                      src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=100&q=75'} 
-                      alt={`${gym.name} brand logo`} 
-                      className="gym-logo" 
+                      src={gym.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=75'} 
+                      alt={`${gym.name} facility and workout floor`} 
+                      className="gym-card-img" 
                       loading="lazy"
                       decoding="async"
-                      width={48}
-                      height={48}
+                      width={350}
+                      height={200}
                     />
+                    <span className="price-tag">Starts at {getStartingPrice(gym.plans)}/mo</span>
+                  </div>
+                </Link>
+                <div className="gym-card-body">
+                  <div className="gym-card-header">
+                    <Link to={`/gyms/${gym.id}`} aria-label={`${gym.name} logo`} style={{ display: 'flex', textDecoration: 'none', flexShrink: 0 }}>
+                      <img 
+                        src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=100&q=75'} 
+                        alt={`${gym.name} brand logo`} 
+                        className="gym-logo" 
+                        loading="lazy"
+                        decoding="async"
+                        width={48}
+                        height={48}
+                      />
+                    </Link>
                     <div>
-                      <h3 className="gym-name">{gym.name}</h3>
+                      <h3 className="gym-name">
+                        <Link to={`/gyms/${gym.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                          {gym.name}
+                        </Link>
+                      </h3>
                       <p className="gym-city"><MapPin size={12} aria-hidden="true" /> {gym.city}</p>
                     </div>
                   </div>

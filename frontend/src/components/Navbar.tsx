@@ -5,6 +5,31 @@ import { useCart } from '../context/CartContext';
 import { Dumbbell, ShoppingCart, MessageSquare, Bell, User, LogOut, Compass, Store } from 'lucide-react';
 import { useCurrency, type CurrencyCode } from '../context/CurrencyContext';
 
+// Route prefetch cache to load route chunks on hover/touch before user click
+const prefetchMap: Record<string, () => void> = {
+  '/': () => { import('../pages/Home'); },
+  '/gyms': () => { import('../pages/GymDiscovery'); },
+  '/store': () => { import('../pages/GymStore'); },
+  '/chat': () => { import('../pages/Chat'); },
+  '/cart': () => { import('../pages/Cart'); },
+  '/dashboard/customer': () => { import('../pages/DashboardCustomer'); },
+  '/dashboard/owner': () => { import('../pages/DashboardOwner'); },
+  '/dashboard/admin': () => { import('../pages/DashboardAdmin'); },
+  '/dashboard/employee': () => { import('../pages/DashboardEmployee'); },
+  '/notifications': () => { import('../pages/Notifications'); },
+  '/login': () => { import('../pages/Login'); },
+};
+
+const prefetchRoute = (path: string) => {
+  if (prefetchMap[path]) {
+    try {
+      prefetchMap[path]();
+    } catch {
+      // Ignore background prefetch failures
+    }
+  }
+};
+
 export const Navbar: React.FC = () => {
   const { user, logout, apiFetch } = useAuth();
   const { cartCount } = useCart();
@@ -12,6 +37,14 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [notificationCount, setNotificationCount] = useState(0);
+
+  const dashboardPath = user?.role === 'ADMIN' 
+    ? '/dashboard/admin' 
+    : user?.role === 'EMPLOYEE'
+      ? '/dashboard/employee'
+      : user?.role === 'GYM_OWNER' 
+        ? '/dashboard/owner' 
+        : '/dashboard/customer';
 
   // Fetch unread notifications
   useEffect(() => {
@@ -48,14 +81,14 @@ export const Navbar: React.FC = () => {
           </Link>
 
           <nav className="desktop-nav" aria-label="Primary Navigation">
-            <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>Home</Link>
-            <Link to="/gyms" className={`nav-link ${isActive('/gyms') ? 'active' : ''}`}>Gym Near Me</Link>
-            <Link to="/store" className={`nav-link ${isActive('/store') ? 'active' : ''}`}>Gym Store</Link>
+            <Link to="/" onMouseEnter={() => prefetchRoute('/')} onTouchStart={() => prefetchRoute('/')} className={`nav-link ${isActive('/') ? 'active' : ''}`}>Home</Link>
+            <Link to="/gyms" onMouseEnter={() => prefetchRoute('/gyms')} onTouchStart={() => prefetchRoute('/gyms')} className={`nav-link ${isActive('/gyms') ? 'active' : ''}`}>Gym Near Me</Link>
+            <Link to="/store" onMouseEnter={() => prefetchRoute('/store')} onTouchStart={() => prefetchRoute('/store')} className={`nav-link ${isActive('/store') ? 'active' : ''}`}>Gym Store</Link>
             {user && (
               <>
-                <Link to="/chat" className={`nav-link ${isActive('/chat') ? 'active' : ''}`}>Messages</Link>
+                <Link to="/chat" onMouseEnter={() => prefetchRoute('/chat')} onTouchStart={() => prefetchRoute('/chat')} className={`nav-link ${isActive('/chat') ? 'active' : ''}`}>Messages</Link>
                 {user.role === 'CUSTOMER' && (
-                  <Link to="/dashboard/customer" className={`nav-link ${isActive('/dashboard/customer') ? 'active' : ''}`}>My Passes</Link>
+                  <Link to="/dashboard/customer" onMouseEnter={() => prefetchRoute('/dashboard/customer')} onTouchStart={() => prefetchRoute('/dashboard/customer')} className={`nav-link ${isActive('/dashboard/customer') ? 'active' : ''}`}>My Passes</Link>
                 )}
               </>
             )}
@@ -97,15 +130,9 @@ export const Navbar: React.FC = () => {
 
                 <div className="profile-dropdown-wrapper">
                   <Link 
-                    to={
-                      user.role === 'ADMIN' 
-                        ? '/dashboard/admin' 
-                        : user.role === 'EMPLOYEE'
-                          ? '/dashboard/employee'
-                          : user.role === 'GYM_OWNER' 
-                            ? '/dashboard/owner' 
-                            : '/dashboard/customer'
-                    } 
+                    to={dashboardPath}
+                    onMouseEnter={() => prefetchRoute(dashboardPath)}
+                    onTouchStart={() => prefetchRoute(dashboardPath)}
                     className="profile-btn"
                     aria-label={`Open ${user.name}'s Dashboard`}
                   >
@@ -129,7 +156,7 @@ export const Navbar: React.FC = () => {
                 </div>
               </>
             ) : (
-              <Link to="/login" className="glow-btn" aria-label="Sign In or Register for GymConnect">Sign In</Link>
+              <Link to="/login" onMouseEnter={() => prefetchRoute('/login')} onTouchStart={() => prefetchRoute('/login')} className="glow-btn" aria-label="Sign In or Register for GymConnect">Sign In</Link>
             )}
           </div>
         </div>
@@ -137,32 +164,28 @@ export const Navbar: React.FC = () => {
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="mobile-bottom-nav glass-panel" aria-label="Mobile Bottom Navigation">
-        <Link to="/" className={`mobile-nav-item ${isActive('/') ? 'active' : ''}`} aria-label="Home page">
+        <Link to="/" onMouseEnter={() => prefetchRoute('/')} onTouchStart={() => prefetchRoute('/')} className={`mobile-nav-item ${isActive('/') ? 'active' : ''}`} aria-label="Home page">
           <Dumbbell className="mobile-nav-icon" aria-hidden="true" />
           <span>Home</span>
         </Link>
-        <Link to="/gyms" className={`mobile-nav-item ${isActive('/gyms') ? 'active' : ''}`} aria-label="Gym discovery map">
+        <Link to="/gyms" onMouseEnter={() => prefetchRoute('/gyms')} onTouchStart={() => prefetchRoute('/gyms')} className={`mobile-nav-item ${isActive('/gyms') ? 'active' : ''}`} aria-label="Gym discovery map">
           <Compass className="mobile-nav-icon" aria-hidden="true" />
           <span>Gyms</span>
         </Link>
-        <Link to="/store" className={`mobile-nav-item ${isActive('/store') ? 'active' : ''}`} aria-label="Fitness gear and supplements store">
+        <Link to="/store" onMouseEnter={() => prefetchRoute('/store')} onTouchStart={() => prefetchRoute('/store')} className={`mobile-nav-item ${isActive('/store') ? 'active' : ''}`} aria-label="Fitness gear and supplements store">
           <Store className="mobile-nav-icon" aria-hidden="true" />
           <span>Store</span>
         </Link>
         {user ? (
           <>
-            <Link to="/chat" className={`mobile-nav-item ${isActive('/chat') ? 'active' : ''} relative`} aria-label="Customer and owner chat">
+            <Link to="/chat" onMouseEnter={() => prefetchRoute('/chat')} onTouchStart={() => prefetchRoute('/chat')} className={`mobile-nav-item ${isActive('/chat') ? 'active' : ''} relative`} aria-label="Customer and owner chat">
               <MessageSquare className="mobile-nav-icon" aria-hidden="true" />
               <span>Chat</span>
             </Link>
             <Link 
-              to={
-                user.role === 'ADMIN' 
-                  ? '/dashboard/admin' 
-                  : user.role === 'GYM_OWNER' 
-                    ? '/dashboard/owner' 
-                    : '/dashboard/customer'
-              } 
+              to={dashboardPath}
+              onMouseEnter={() => prefetchRoute(dashboardPath)}
+              onTouchStart={() => prefetchRoute(dashboardPath)}
               className={`mobile-nav-item ${location.pathname.startsWith('/dashboard') ? 'active' : ''}`}
               aria-label="User profile and dashboard"
             >
@@ -171,7 +194,7 @@ export const Navbar: React.FC = () => {
             </Link>
           </>
         ) : (
-          <Link to="/login" className={`mobile-nav-item ${isActive('/login') ? 'active' : ''}`} aria-label="Log in or create account">
+          <Link to="/login" onMouseEnter={() => prefetchRoute('/login')} onTouchStart={() => prefetchRoute('/login')} className={`mobile-nav-item ${isActive('/login') ? 'active' : ''}`} aria-label="Log in or create account">
             <User className="mobile-nav-icon" aria-hidden="true" />
             <span>Login</span>
           </Link>

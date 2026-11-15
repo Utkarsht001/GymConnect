@@ -51,17 +51,22 @@ export const DashboardEmployee: React.FC = () => {
   const fetchEmployeeData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch 2-day unreplied escalations
-      const escalationsData = await apiFetch('/api/messages/escalations');
-      setEscalations(escalationsData || []);
+      // Parallelize employee support queries concurrently with Promise.allSettled
+      const [escalationsRes, complaintsRes, gymsRes] = await Promise.allSettled([
+        apiFetch('/api/messages/escalations'),
+        apiFetch('/api/complaints'),
+        apiFetch('/api/gyms?isApproved=false')
+      ]);
 
-      // 2. Fetch customer complaints
-      const complaintsData = await apiFetch('/api/complaints');
-      setComplaints(complaintsData || []);
-
-      // 3. Fetch gym directory
-      const gymsData = await apiFetch('/api/gyms?isApproved=false');
-      setGyms(gymsData || []);
+      if (escalationsRes.status === 'fulfilled') {
+        setEscalations(escalationsRes.value || []);
+      }
+      if (complaintsRes.status === 'fulfilled') {
+        setComplaints(complaintsRes.value || []);
+      }
+      if (gymsRes.status === 'fulfilled') {
+        setGyms(gymsRes.value || []);
+      }
     } catch (err) {
       console.error('Failed to load employee support records');
     } finally {

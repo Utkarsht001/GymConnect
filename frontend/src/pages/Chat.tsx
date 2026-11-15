@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SEO } from '../components/SEO';
 import { io, Socket } from 'socket.io-client';
-import { 
-  MessageSquare, Send, User, ChevronLeft, Smile, Image as ImageIcon, 
-  X, Check, CheckCheck, Loader2, Search, Building2 
+import {
+  MessageSquare, Send, User, ChevronLeft, Smile, Image as ImageIcon,
+  X, Check, CheckCheck, Loader2, Search, Building2
 } from 'lucide-react';
 
 interface Participant {
@@ -252,7 +252,7 @@ export const Chat: React.FC = () => {
 
         // Mark read on backend
         if (msg.senderId === otherId) {
-          apiFetch(`/api/messages/read/${otherId}`, { method: 'PUT' }).catch(() => {});
+          apiFetch(`/api/messages/read/${otherId}`, { method: 'PUT' }).catch(() => { });
           socket.emit('mark_read', { otherUserId: otherId });
         }
       }
@@ -448,7 +448,7 @@ export const Chat: React.FC = () => {
     <div className="chat-page-container container">
       <SEO title="Direct Messages & Real-Time Chat | GymConnect" canonicalPath="/chat" noindex={true} />
       <div className="chat-interface-wrapper glass-panel">
-        
+
         {/* SIDEBAR: CONVERSATIONS LIST */}
         <aside className={`chat-channels-sidebar ${activeConversation ? 'chat-active' : ''}`} aria-label="Conversation Channels">
           <div className="sidebar-header">
@@ -475,7 +475,7 @@ export const Chat: React.FC = () => {
               )}
             </div>
           </div>
-          
+
           <div className="channels-list" role="list">
             {filteredConversations.length === 0 ? (
               <div className="empty-channels text-center" style={{ padding: '2rem 1rem' }}>
@@ -497,7 +497,7 @@ export const Chat: React.FC = () => {
               filteredConversations.map(conv => {
                 const isSelected = activeConversation?.otherUser.id === conv.otherUser.id;
                 return (
-                  <div 
+                  <div
                     key={conv.otherUser.id}
                     onClick={() => handleSelectConversation(conv)}
                     className={`channel-item ${isSelected ? 'active' : ''}`}
@@ -507,10 +507,10 @@ export const Chat: React.FC = () => {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectConversation(conv); }}
                   >
                     <div className="channel-avatar-wrap">
-                      <img 
-                        src={conv.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'} 
-                        alt={`${conv.otherUser.name}'s avatar`} 
-                        className="channel-avatar" 
+                      <img
+                        src={conv.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'}
+                        alt={`${conv.otherUser.name}'s avatar`}
+                        className="channel-avatar"
                         loading="lazy"
                         decoding="async"
                         width={44}
@@ -560,18 +560,18 @@ export const Chat: React.FC = () => {
             <>
               {/* Thread Header */}
               <div className="thread-header">
-                <button 
-                  onClick={() => setActiveConversation(null)} 
+                <button
+                  onClick={() => setActiveConversation(null)}
                   className="back-channels-btn"
                   aria-label="Back to conversations list"
                 >
                   <ChevronLeft size={18} aria-hidden="true" /> Back
                 </button>
                 <div className="thread-user-info">
-                  <img 
-                    src={activeConversation.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'} 
-                    alt={`${activeConversation.otherUser.name}'s profile avatar`} 
-                    className="thread-avatar" 
+                  <img
+                    src={activeConversation.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'}
+                    alt={`${activeConversation.otherUser.name}'s profile avatar`}
+                    className="thread-avatar"
                     width={42}
                     height={42}
                   />
@@ -589,7 +589,7 @@ export const Chat: React.FC = () => {
                 </div>
 
                 {activeConversation.otherUser.gymId && (
-                  <button 
+                  <button
                     onClick={() => navigate(`/gyms/${activeConversation.otherUser.gymId}`)}
                     className="btn-secondary"
                     style={{ marginLeft: 'auto', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
@@ -624,13 +624,13 @@ export const Chat: React.FC = () => {
                     const isOwnMessage = msg.senderId === user.id;
 
                     return (
-                      <div 
-                        key={msg.id} 
+                      <div
+                        key={msg.id}
                         className={`message-bubble-wrapper ${isOwnMessage ? 'own-msg' : 'incoming-msg'}`}
                       >
                         {!isOwnMessage && (
-                          <img 
-                            src={msg.sender?.avatar || activeConversation.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=40&q=75'} 
+                          <img
+                            src={msg.sender?.avatar || activeConversation.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=40&q=75'}
                             alt={`${msg.sender?.name || activeConversation.otherUser.name}'s avatar`}
                             className="bubble-avatar-mini"
                             width={28}
@@ -647,10 +647,10 @@ export const Chat: React.FC = () => {
 
                           <div className="message-bubble">
                             {msg.imageUrl && (
-                              <img 
-                                src={msg.imageUrl} 
-                                alt="Attached content" 
-                                className="chat-bubble-image" 
+                              <img
+                                src={msg.imageUrl}
+                                alt="Attached content"
+                                className="chat-bubble-image"
                                 onClick={() => window.open(msg.imageUrl, '_blank')}
                               />
                             )}
@@ -684,9 +684,9 @@ export const Chat: React.FC = () => {
                 <div className="chat-image-preview-bar glass-card">
                   <img src={selectedImage} alt="Attachment Preview" className="preview-attachment-thumb" />
                   <span className="text-secondary" style={{ fontSize: '0.8rem' }}>Photo attached and ready to send</span>
-                  <button 
-                    type="button" 
-                    onClick={() => setSelectedImage(null)} 
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImage(null)}
                     className="clear-attachment-btn"
                     aria-label="Remove image attachment"
                   >
@@ -710,9 +710,9 @@ export const Chat: React.FC = () => {
                 <div className="emoji-picker-popover glass-panel" role="region" aria-label="Emoji Picker">
                   <div className="emoji-grid">
                     {EMOJI_LIST.map((emoji, idx) => (
-                      <button 
-                        key={idx} 
-                        type="button" 
+                      <button
+                        key={idx}
+                        type="button"
                         onClick={() => handleInsertEmoji(emoji)}
                         className="emoji-btn"
                         aria-label={`Insert emoji ${emoji}`}
@@ -756,10 +756,10 @@ export const Chat: React.FC = () => {
                 />
 
                 <label htmlFor="chat-message-field" className="sr-only">Type your message</label>
-                <input 
+                <input
                   id="chat-message-field"
                   name="chatMessage"
-                  type="text" 
+                  type="text"
                   placeholder="Type a message (press Enter to send)..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
@@ -774,9 +774,9 @@ export const Chat: React.FC = () => {
                   autoComplete="off"
                   disabled={isSending}
                 />
-                
-                <button 
-                  type="submit" 
+
+                <button
+                  type="submit"
                   disabled={isSending || (!inputText.trim() && !selectedImage)}
                   className="glow-btn send-msg-btn flex-center"
                   aria-label="Send chat message"

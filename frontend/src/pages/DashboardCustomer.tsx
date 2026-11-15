@@ -48,30 +48,31 @@ export const DashboardCustomer: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Fetch customer stats & records
+  // Fetch customer stats & records in parallel
   const loadDashboardData = async () => {
     setErrorMsg(null);
     try {
-      // 1. Fetch subscriptions
-      const subs = await apiFetch('/api/subscriptions/my');
-      setSubscriptions(subs || []);
-
-      // 2. Fetch orders
-      const ords = await apiFetch('/api/orders/my');
-      setOrders(ords || []);
-
-      // 3. Fetch conversations
-      try {
-        const convs = await apiFetch('/api/messages/conversations');
-        setConversations(convs || []);
-      } catch (e) {
-        console.warn('Could not fetch conversations:', e);
-      }
-
-      // 4. Fetch favorites from localStorage list
       const favIds = JSON.parse(localStorage.getItem('fithub_favorites') || '[]');
-      if (favIds.length > 0) {
-        const allGyms = await apiFetch('/api/gyms');
+      
+      // Parallelize all dashboard queries concurrently with Promise.allSettled
+      const [subsRes, ordsRes, convsRes, gymsRes] = await Promise.allSettled([
+        apiFetch('/api/subscriptions/my'),
+        apiFetch('/api/orders/my'),
+        apiFetch('/api/messages/conversations'),
+        favIds.length > 0 ? apiFetch('/api/gyms') : Promise.resolve([])
+      ]);
+
+      if (subsRes.status === 'fulfilled') {
+        setSubscriptions(subsRes.value || []);
+      }
+      if (ordsRes.status === 'fulfilled') {
+        setOrders(ordsRes.value || []);
+      }
+      if (convsRes.status === 'fulfilled') {
+        setConversations(convsRes.value || []);
+      }
+      if (gymsRes.status === 'fulfilled' && favIds.length > 0) {
+        const allGyms = gymsRes.value || [];
         const favGyms = allGyms.filter((g: any) => favIds.includes(g.id));
         setFavorites(favGyms);
       } else {
@@ -126,10 +127,10 @@ export const DashboardCustomer: React.FC = () => {
       <SEO title="Member Dashboard & Active Passes" canonicalPath="/dashboard/customer" noindex={true} />
       {/* 1. PROFILE HEADER */}
       <section className="profile-banner-card glass-panel" aria-label="Customer Profile Summary">
-        <img 
-          src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=75'} 
-          alt={`${user?.name || 'Customer'}'s profile avatar`} 
-          className="profile-large-avatar" 
+        <img
+          src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=75'}
+          alt={`${user?.name || 'Customer'}'s profile avatar`}
+          className="profile-large-avatar"
           width={72}
           height={72}
         />
@@ -161,9 +162,9 @@ export const DashboardCustomer: React.FC = () => {
       {errorMsg && (
         <div className="error-alert-bar" role="alert" style={{ margin: '1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>⚠️ {errorMsg}</span>
-          <button 
-            type="button" 
-            onClick={loadDashboardData} 
+          <button
+            type="button"
+            onClick={loadDashboardData}
             style={{ background: 'var(--primary-color)', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
             aria-label="Retry loading dashboard data"
           >
@@ -174,14 +175,14 @@ export const DashboardCustomer: React.FC = () => {
 
       {/* 2. MAIN LAYOUT GRID */}
       <div className="dashboard-content-split">
-        
+
         {/* Left main: Active Subscriptions & Orders */}
         <div className="main-feed-column">
-          
+
           {/* Active Memberships */}
           <section className="dashboard-block-panel glass-panel" aria-label="Active Gym Memberships">
             <h2><CreditCard size={18} aria-hidden="true" /> My Memberships</h2>
-            
+
             {activeSubs.length === 0 ? (
               <div className="empty-feed-card text-center">
                 <Dumbbell size={32} className="text-muted" aria-hidden="true" />
@@ -192,10 +193,10 @@ export const DashboardCustomer: React.FC = () => {
               <div className="subs-list">
                 {activeSubs.map(sub => (
                   <article key={sub.id} className="sub-dashboard-card glass-card">
-                    <img 
-                      src={sub.gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=80&q=75'} 
-                      alt={`${sub.gym.name} brand logo`} 
-                      className="gym-logo-sub" 
+                    <img
+                      src={sub.gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=80&q=75'}
+                      alt={`${sub.gym.name} brand logo`}
+                      className="gym-logo-sub"
                       width={48}
                       height={48}
                       loading="lazy"
@@ -207,7 +208,7 @@ export const DashboardCustomer: React.FC = () => {
                         <span className="badge badge-approved">Active</span>
                       </div>
                       <p className="sub-plan-name">Plan: <b>{sub.plan.name}</b> (Paid: ₹{sub.pricePaid})</p>
-                      
+
                       <div className="sub-dates-row">
                         <Calendar size={14} aria-hidden="true" />
                         <span>Valid: {new Date(sub.startDate).toLocaleDateString()} - <b>{new Date(sub.endDate).toLocaleDateString()}</b></span>
@@ -215,7 +216,7 @@ export const DashboardCustomer: React.FC = () => {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0 }}>
-                      <button 
+                      <button
                         onClick={() => navigate(`/chat?userId=${sub.gym.ownerId || sub.gym.id}`, { state: { startChatWith: { id: sub.gym.ownerId || sub.gym.id, name: sub.gym.name, avatar: sub.gym.logo, role: 'GYM_OWNER', gymName: sub.gym.name, gymId: sub.gym.id } } })}
                         className="glow-btn flex-center"
                         style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', gap: '0.25rem' }}
@@ -223,7 +224,7 @@ export const DashboardCustomer: React.FC = () => {
                       >
                         <MessageSquare size={12} aria-hidden="true" /> Message Gym
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleCancelSub(sub.id)}
                         className="btn-secondary cancel-sub-btn"
                         style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
@@ -241,7 +242,7 @@ export const DashboardCustomer: React.FC = () => {
           {/* E-Store Orders History */}
           <section className="dashboard-block-panel glass-panel" aria-label="Product Order History">
             <h2><ShoppingBag size={18} aria-hidden="true" /> Product Orders ({orders.length})</h2>
-            
+
             {orders.length === 0 ? (
               <div className="empty-feed-card text-center">
                 <p className="text-muted">No shopping orders found.</p>
@@ -264,9 +265,9 @@ export const DashboardCustomer: React.FC = () => {
                     <div className="order-items-preview">
                       {order.items.map(item => (
                         <div key={item.id} className="order-item-inline">
-                          <img 
-                            src={item.product.image || 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=60&q=75'} 
-                            alt={`${item.product.name} product photo`} 
+                          <img
+                            src={item.product.image || 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=60&q=75'}
+                            alt={`${item.product.name} product photo`}
                             width={36}
                             height={36}
                             loading="lazy"
@@ -293,7 +294,7 @@ export const DashboardCustomer: React.FC = () => {
 
         {/* Right sidebar: Messages & Favorite Gyms */}
         <aside className="dashboard-sidebar-column" aria-label="Customer Communications and Saved Gyms">
-          
+
           {/* Gym Conversations Panel */}
           <section className="dashboard-block-panel glass-panel" style={{ marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -310,18 +311,18 @@ export const DashboardCustomer: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {conversations.slice(0, 4).map(c => (
-                  <div 
+                  <div
                     key={c.otherUser.id}
                     onClick={() => navigate(`/chat?userId=${c.otherUser.id}`, { state: { startChatWith: c.otherUser } })}
                     className="fav-sidebar-card glass-card"
                     style={{ cursor: 'pointer', padding: '0.6rem 0.75rem' }}
                   >
-                    <img 
-                      src={c.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'} 
-                      alt={c.otherUser.name} 
-                      className="fav-logo" 
-                      width={32} 
-                      height={32} 
+                    <img
+                      src={c.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
+                      alt={c.otherUser.name}
+                      className="fav-logo"
+                      width={32}
+                      height={32}
                     />
                     <div className="fav-info" style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -351,17 +352,17 @@ export const DashboardCustomer: React.FC = () => {
 
           <section className="dashboard-block-panel glass-panel">
             <h2><Heart size={18} aria-hidden="true" /> Favorites ({favorites.length})</h2>
-            
+
             {favorites.length === 0 ? (
               <p className="text-muted text-center" style={{ padding: '2rem 0' }}>No saved gyms.</p>
             ) : (
               <div className="favorites-list-sidebar">
                 {favorites.map(gym => (
                   <div key={gym.id} className="fav-sidebar-card glass-card">
-                    <img 
-                      src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=60&q=75'} 
-                      alt={`${gym.name} logo`} 
-                      className="fav-logo" 
+                    <img
+                      src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=60&q=75'}
+                      alt={`${gym.name} logo`}
+                      className="fav-logo"
                       width={36}
                       height={36}
                       loading="lazy"
