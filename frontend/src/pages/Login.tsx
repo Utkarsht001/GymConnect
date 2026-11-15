@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { Dumbbell, Mail, Lock, User, Phone, ArrowRight, KeyRound, X, CheckCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -146,82 +147,105 @@ export const Login: React.FC = () => {
 
   return (
     <div className="login-page-container flex-center">
+      <SEO 
+        title={isRegister ? "Create Your GymConnect Account" : "Sign In to GymConnect"} 
+        description="Access your GymConnect member dashboard, manage gym listings, view active membership passes, or track store orders."
+        canonicalPath="/login" 
+      />
       <div className="login-card-wrapper glass-panel">
         
         {/* Header */}
         <div className="login-card-header text-center">
-          <Dumbbell className="logo-icon animate-float" />
+          <Dumbbell className="logo-icon animate-float" aria-hidden="true" />
           <h2>{roleSelection === 'ADMIN' ? '🛡️ System Admin Cockpit' : isRegister ? 'Create Account' : 'Welcome Back'}</h2>
           <p>{roleSelection === 'ADMIN' ? 'Super Administrator Authentication Portal' : isRegister ? 'Join Jaipur\'s premium fitness circle' : 'Log in to access your workouts and dashboard'}</p>
         </div>
 
         {/* Account Type Selector Bar */}
-        <div className="role-selector-row" style={{ marginBottom: '1.25rem' }}>
+        <div className="role-selector-row" role="tablist" aria-label="Account Role Selection" style={{ marginBottom: '1.25rem' }}>
           <button
             type="button"
+            role="tab"
+            aria-selected={roleSelection === 'CUSTOMER'}
             onClick={() => setRoleSelection('CUSTOMER')}
             className={`role-choice-btn ${roleSelection === 'CUSTOMER' ? 'active' : ''}`}
             style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem' }}
+            aria-label="Customer Role"
           >
             Customer
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={roleSelection === 'GYM_OWNER'}
             onClick={() => setRoleSelection('GYM_OWNER')}
             className={`role-choice-btn ${roleSelection === 'GYM_OWNER' ? 'active' : ''}`}
             style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem' }}
+            aria-label="Gym Owner Role"
           >
             Gym Owner
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={roleSelection === 'EMPLOYEE'}
             onClick={() => setRoleSelection('EMPLOYEE')}
             className={`role-choice-btn ${roleSelection === 'EMPLOYEE' ? 'active' : ''}`}
             style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem' }}
+            aria-label="Support Staff Role"
           >
             Support Staff
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={roleSelection === 'ADMIN'}
             onClick={() => setRoleSelection('ADMIN')}
             className={`role-choice-btn ${roleSelection === 'ADMIN' ? 'active' : ''}`}
             style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', color: '#ef4444', borderColor: roleSelection === 'ADMIN' ? '#ef4444' : 'rgba(239,68,68,0.3)' }}
+            aria-label="Super Administrator Role"
           >
             🛡️ Admin
           </button>
         </div>
 
         {errorMsg && (
-          <div className="error-alert-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
+          <div className="error-alert-bar" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* Auth form */}
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" aria-label={isRegister ? "Registration Form" : "Login Form"}>
           {isRegister && (
             <>
               <div className="form-group">
-                <label><User size={14} /> Full Name</label>
+                <label htmlFor="auth-name-input"><User size={14} aria-hidden="true" /> Full Name</label>
                 <input 
+                  id="auth-name-input"
+                  name="name"
                   type="text"
                   placeholder="e.g. Rahul Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="form-control"
                   required
+                  autoComplete="name"
                 />
               </div>
 
               {roleSelection !== 'ADMIN' && (
                 <div className="form-group">
-                  <label><Phone size={14} /> Mobile Phone Number</label>
+                  <label htmlFor="auth-phone-input"><Phone size={14} aria-hidden="true" /> Mobile Phone Number</label>
                   <input 
+                    id="auth-phone-input"
+                    name="phone"
                     type="tel"
                     placeholder="e.g. 9876543210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="form-control"
+                    autoComplete="tel"
                   />
                 </div>
               )}
@@ -229,22 +253,25 @@ export const Login: React.FC = () => {
           )}
 
           <div className="form-group">
-            <label>
-              <Mail size={14} /> {isRegister ? 'Email Address' : 'Email Address or Mobile Phone Number'}
+            <label htmlFor="auth-login-input">
+              <Mail size={14} aria-hidden="true" /> {isRegister ? 'Email Address' : 'Email Address or Mobile Phone Number'}
             </label>
             <input 
+              id="auth-login-input"
+              name="loginInput"
               type="text"
               placeholder={isRegister ? 'name@example.com' : 'Enter registered Email or Phone number...'}
               value={emailOrPhone}
               onChange={(e) => setEmailOrPhone(e.target.value)}
               className="form-control"
               required
+              autoComplete="username"
             />
           </div>
 
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label><Lock size={14} /> Password</label>
+              <label htmlFor="auth-password-input"><Lock size={14} aria-hidden="true" /> Password</label>
               {!isRegister && (
                 <button 
                   type="button" 
@@ -257,23 +284,32 @@ export const Login: React.FC = () => {
                   }}
                   className="forgot-password-link-btn"
                   style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', cursor: 'pointer' }}
+                  aria-label="Open forgot password dialog"
                 >
                   Forgot Password?
                 </button>
               )}
             </div>
             <input 
+              id="auth-password-input"
+              name="password"
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="form-control"
               required
+              autoComplete={isRegister ? "new-password" : "current-password"}
             />
           </div>
 
-          <button type="submit" disabled={submitting} className="glow-btn login-submit-btn">
-            {submitting ? 'Authenticating...' : isRegister ? 'Sign Up' : 'Sign In'} <ArrowRight size={18} />
+          <button 
+            type="submit" 
+            disabled={submitting} 
+            className="glow-btn login-submit-btn"
+            aria-label={submitting ? 'Authenticating credentials...' : isRegister ? 'Complete account registration' : 'Sign in to account'}
+          >
+            {submitting ? 'Authenticating...' : isRegister ? 'Sign Up' : 'Sign In'} <ArrowRight size={18} aria-hidden="true" />
           </button>
         </form>
 
@@ -299,52 +335,68 @@ export const Login: React.FC = () => {
 
       {/* FORGOT PASSWORD RESET LINK MODAL */}
       {showForgotModal && (
-        <div className="modal-overlay flex-center" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, padding: '1rem' }}>
+        <div 
+          className="modal-overlay flex-center" 
+          role="dialog"
+          aria-modal="true"
+          aria-label="Recover Password"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, padding: '1rem' }}
+        >
           <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '2rem', borderRadius: '12px', position: 'relative' }}>
             <button 
               onClick={() => setShowForgotModal(false)}
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              aria-label="Close password recovery dialog"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
 
             <div className="text-center" style={{ marginBottom: '1.5rem' }}>
-              <KeyRound size={36} className="text-primary animate-float" />
+              <KeyRound size={36} className="text-primary animate-float" aria-hidden="true" />
               <h3 style={{ margin: '0.5rem 0 0.2rem 0' }}>Recover Password</h3>
               <p className="text-secondary" style={{ fontSize: '0.8rem' }}>Receive a secure reset link in your email</p>
             </div>
 
             {forgotMsg && (
               <div className="glass-card text-center" style={{ padding: '0.85rem', marginBottom: '1.25rem', border: '1px solid var(--primary-color)' }}>
-                <CheckCircle size={24} style={{ color: 'var(--primary-color)', margin: '0 auto 0.5rem auto' }} />
+                <CheckCircle size={24} style={{ color: 'var(--primary-color)', margin: '0 auto 0.5rem auto' }} aria-hidden="true" />
                 <p style={{ fontSize: '0.82rem', color: '#f0f6fc', lineHeight: 1.5, margin: 0 }}>{forgotMsg}</p>
               </div>
             )}
 
             {forgotErr && (
-              <div className="error-alert-bar" style={{ marginBottom: '1rem' }}>
+              <div className="error-alert-bar" role="alert" style={{ marginBottom: '1rem' }}>
                 <span>{forgotErr}</span>
               </div>
             )}
 
             {!forgotSent ? (
-              <form onSubmit={handleRequestResetLink}>
+              <form onSubmit={handleRequestResetLink} aria-label="Password Reset Request Form">
                 <div className="form-group">
-                  <label><Mail size={14} /> Registered Email Address</label>
+                  <label htmlFor="forgot-email-field"><Mail size={14} aria-hidden="true" /> Registered Email Address</label>
                   <input 
+                    id="forgot-email-field"
+                    name="email"
                     type="email"
                     placeholder="e.g. name@example.com"
                     value={forgotInput}
                     onChange={(e) => setForgotInput(e.target.value)}
                     className="form-control"
                     required
+                    autoComplete="email"
                     autoFocus
                   />
                   <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.35rem', display: 'block' }}>
                     We'll send a 15-minute single-use password reset link via Brevo.
                   </small>
                 </div>
-                <button type="submit" disabled={forgotLoading} className="glow-btn" style={{ width: '100%', marginTop: '1.25rem' }}>
+                <button 
+                  type="submit" 
+                  disabled={forgotLoading} 
+                  className="glow-btn" 
+                  style={{ width: '100%', marginTop: '1.25rem' }}
+                  aria-label={forgotLoading ? 'Dispatching Reset Link...' : 'Send Password Reset Link'}
+                >
                   {forgotLoading ? 'Dispatching Reset Link...' : 'Send Password Reset Link'}
                 </button>
               </form>
@@ -355,6 +407,7 @@ export const Login: React.FC = () => {
                   onClick={() => setShowForgotModal(false)}
                   className="glow-btn"
                   style={{ width: '100%' }}
+                  aria-label="Return to Sign In"
                 >
                   Return to Sign In
                 </button>

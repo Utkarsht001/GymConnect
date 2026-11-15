@@ -118,6 +118,7 @@ export const ImageInput: React.FC<ImageInputProps> = ({
             value={value}
             onChange={handleTextChange}
             placeholder={placeholder}
+            aria-label={label}
             className="form-control text-input-field"
             required={required && !value}
           />
@@ -128,6 +129,7 @@ export const ImageInput: React.FC<ImageInputProps> = ({
           onClick={() => fileInputRef.current?.click()}
           className="btn-secondary upload-file-btn"
           title="Upload image from saved local files or device"
+          aria-label={`Browse file for ${label}`}
         >
           <Upload size={14} /> Browse File
         </button>
@@ -137,6 +139,7 @@ export const ImageInput: React.FC<ImageInputProps> = ({
           ref={fileInputRef}
           onChange={handleFileChange}
           accept="image/*"
+          aria-label={`Upload ${label} file`}
           style={{ display: 'none' }}
         />
       </div>
@@ -148,7 +151,9 @@ export const ImageInput: React.FC<ImageInputProps> = ({
         <div className="image-preview-wrapper glass-card">
           <img
             src={value}
-            alt="Preview"
+            alt={`${label} preview`}
+            width={64}
+            height={64}
             className="image-preview-thumb"
             onError={(e) => {
               // Hide broken preview fallback
@@ -170,6 +175,7 @@ export const ImageInput: React.FC<ImageInputProps> = ({
             onClick={() => onChange('')}
             className="remove-preview-btn"
             title="Clear Image"
+            aria-label={`Clear ${label} image`}
           >
             <X size={14} />
           </button>

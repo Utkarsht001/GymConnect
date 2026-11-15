@@ -40,14 +40,14 @@ export const Navbar: React.FC = () => {
   return (
     <>
       {/* DESKTOP HEADER (Hidden on mobile via CSS) */}
-      <header className="desktop-header glass-panel">
+      <header className="desktop-header glass-panel" role="banner">
         <div className="container header-container">
-          <Link to="/" className="logo-section">
-            <Dumbbell className="logo-icon animate-float" />
-            <span className="logo-text">GYM<span className="highlight">GO</span></span>
+          <Link to="/" className="logo-section" aria-label="GymConnect Home">
+            <Dumbbell className="logo-icon animate-float" aria-hidden="true" />
+            <span className="logo-text">Gym<span className="highlight">Connect</span></span>
           </Link>
 
-          <nav className="desktop-nav">
+          <nav className="desktop-nav" aria-label="Primary Navigation">
             <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>Home</Link>
             <Link to="/gyms" className={`nav-link ${isActive('/gyms') ? 'active' : ''}`}>Gym Near Me</Link>
             <Link to="/store" className={`nav-link ${isActive('/store') ? 'active' : ''}`}>Gym Store</Link>
@@ -55,7 +55,7 @@ export const Navbar: React.FC = () => {
               <>
                 <Link to="/chat" className={`nav-link ${isActive('/chat') ? 'active' : ''}`}>Messages</Link>
                 {user.role === 'CUSTOMER' && (
-                  <Link to="/favorites" className={`nav-link ${isActive('/favorites') ? 'active' : ''}`}>Favorites</Link>
+                  <Link to="/dashboard/customer" className={`nav-link ${isActive('/dashboard/customer') ? 'active' : ''}`}>My Passes</Link>
                 )}
               </>
             )}
@@ -64,11 +64,14 @@ export const Navbar: React.FC = () => {
           <div className="actions-section">
             {/* Multi-Currency Dropdown */}
             <div className="currency-picker-wrapper">
+              <label htmlFor="currency-select-nav" className="sr-only">Display Currency</label>
               <select
+                id="currency-select-nav"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                 className="currency-select-dropdown"
                 title="Select Currency"
+                aria-label="Select Display Currency"
               >
                 <option value="INR">₹ INR</option>
                 <option value="USD">$ USD</option>
@@ -81,15 +84,15 @@ export const Navbar: React.FC = () => {
             {user ? (
               <>
                 {user.role === 'CUSTOMER' && (
-                  <Link to="/cart" className="action-icon-wrapper">
-                    <ShoppingCart className="action-icon" />
-                    {cartCount > 0 && <span className="icon-badge">{cartCount}</span>}
+                  <Link to="/cart" className="action-icon-wrapper" aria-label={`Shopping Cart (${cartCount} items)`}>
+                    <ShoppingCart className="action-icon" aria-hidden="true" />
+                    {cartCount > 0 && <span className="icon-badge" aria-hidden="true">{cartCount}</span>}
                   </Link>
                 )}
                 
-                <Link to="/notifications" className="action-icon-wrapper">
-                  <Bell className="action-icon" />
-                  {notificationCount > 0 && <span className="icon-badge">{notificationCount}</span>}
+                <Link to="/notifications" className="action-icon-wrapper" aria-label={`Notifications (${notificationCount} unread)`}>
+                  <Bell className="action-icon" aria-hidden="true" />
+                  {notificationCount > 0 && <span className="icon-badge" aria-hidden="true">{notificationCount}</span>}
                 </Link>
 
                 <div className="profile-dropdown-wrapper">
@@ -104,40 +107,52 @@ export const Navbar: React.FC = () => {
                             : '/dashboard/customer'
                     } 
                     className="profile-btn"
+                    aria-label={`Open ${user.name}'s Dashboard`}
                   >
-                    <img src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'} alt="Avatar" className="user-avatar" />
+                    <img 
+                      src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'} 
+                      alt={`${user.name}'s profile avatar`} 
+                      className="user-avatar" 
+                      width={26}
+                      height={26}
+                    />
                     <span className="user-name">{user.name.split(' ')[0]}</span>
                   </Link>
-                  <button onClick={handleLogout} className="logout-btn" title="Log Out">
-                    <LogOut className="logout-icon" />
+                  <button 
+                    onClick={handleLogout} 
+                    className="logout-btn" 
+                    title="Log Out"
+                    aria-label="Log out of GymConnect"
+                  >
+                    <LogOut className="logout-icon" aria-hidden="true" />
                   </button>
                 </div>
               </>
             ) : (
-              <Link to="/login" className="glow-btn">Sign In</Link>
+              <Link to="/login" className="glow-btn" aria-label="Sign In or Register for GymConnect">Sign In</Link>
             )}
           </div>
         </div>
       </header>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="mobile-bottom-nav glass-panel">
-        <Link to="/" className={`mobile-nav-item ${isActive('/') ? 'active' : ''}`}>
-          <Dumbbell className="mobile-nav-icon" />
+      <nav className="mobile-bottom-nav glass-panel" aria-label="Mobile Bottom Navigation">
+        <Link to="/" className={`mobile-nav-item ${isActive('/') ? 'active' : ''}`} aria-label="Home page">
+          <Dumbbell className="mobile-nav-icon" aria-hidden="true" />
           <span>Home</span>
         </Link>
-        <Link to="/gyms" className={`mobile-nav-item ${isActive('/gyms') ? 'active' : ''}`}>
-          <Compass className="mobile-nav-icon" />
+        <Link to="/gyms" className={`mobile-nav-item ${isActive('/gyms') ? 'active' : ''}`} aria-label="Gym discovery map">
+          <Compass className="mobile-nav-icon" aria-hidden="true" />
           <span>Gyms</span>
         </Link>
-        <Link to="/store" className={`mobile-nav-item ${isActive('/store') ? 'active' : ''}`}>
-          <Store className="mobile-nav-icon" />
+        <Link to="/store" className={`mobile-nav-item ${isActive('/store') ? 'active' : ''}`} aria-label="Fitness gear and supplements store">
+          <Store className="mobile-nav-icon" aria-hidden="true" />
           <span>Store</span>
         </Link>
         {user ? (
           <>
-            <Link to="/chat" className={`mobile-nav-item ${isActive('/chat') ? 'active' : ''} relative`}>
-              <MessageSquare className="mobile-nav-icon" />
+            <Link to="/chat" className={`mobile-nav-item ${isActive('/chat') ? 'active' : ''} relative`} aria-label="Customer and owner chat">
+              <MessageSquare className="mobile-nav-icon" aria-hidden="true" />
               <span>Chat</span>
             </Link>
             <Link 
@@ -149,14 +164,15 @@ export const Navbar: React.FC = () => {
                     : '/dashboard/customer'
               } 
               className={`mobile-nav-item ${location.pathname.startsWith('/dashboard') ? 'active' : ''}`}
+              aria-label="User profile and dashboard"
             >
-              <User className="mobile-nav-icon" />
+              <User className="mobile-nav-icon" aria-hidden="true" />
               <span>Profile</span>
             </Link>
           </>
         ) : (
-          <Link to="/login" className={`mobile-nav-item ${isActive('/login') ? 'active' : ''}`}>
-            <User className="mobile-nav-icon" />
+          <Link to="/login" className={`mobile-nav-item ${isActive('/login') ? 'active' : ''}`} aria-label="Log in or create account">
+            <User className="mobile-nav-icon" aria-hidden="true" />
             <span>Login</span>
           </Link>
         )}

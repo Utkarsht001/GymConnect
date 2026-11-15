@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { SEO } from '../components/SEO';
 import { ShoppingCart, Trash2, MapPin, Phone, CreditCard, ChevronLeft } from 'lucide-react';
 
 export const Cart: React.FC = () => {
@@ -48,10 +49,11 @@ export const Cart: React.FC = () => {
   if (cartItems.length === 0) {
     return (
       <div className="cart-page-container container text-center empty-cart-view flex-center">
-        <ShoppingCart size={64} className="text-muted" />
+        <SEO title="Shopping Cart - Empty" canonicalPath="/cart" noindex={true} />
+        <ShoppingCart size={64} className="text-muted" aria-hidden="true" />
         <h2>Your Shopping Cart is Empty</h2>
         <p>Browse our gym store for high quality athletic gear and supplements.</p>
-        <Link to="/store" className="glow-btn">
+        <Link to="/store" className="glow-btn" aria-label="Browse the gym store">
           Go to Store
         </Link>
       </div>
@@ -60,8 +62,9 @@ export const Cart: React.FC = () => {
 
   return (
     <div className="cart-page-container container">
-      <Link to="/store" className="back-link">
-        <ChevronLeft size={16} /> Continue Shopping
+      <SEO title="Shopping Cart & Checkout" canonicalPath="/cart" noindex={true} />
+      <Link to="/store" className="back-link" aria-label="Return to store and continue shopping">
+        <ChevronLeft size={16} aria-hidden="true" /> Continue Shopping
       </Link>
       <h1 className="cart-title">Your Cart</h1>
 
@@ -70,7 +73,15 @@ export const Cart: React.FC = () => {
         <div className="cart-items-section">
           {cartItems.map(item => (
             <div key={item.id} className="cart-item-row glass-panel">
-              <img src={item.product.image} alt={item.product.name} className="cart-item-thumb" />
+              <img 
+                src={item.product.image || 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=150&q=75'} 
+                alt={`${item.product.name} product photo`} 
+                className="cart-item-thumb" 
+                loading="lazy"
+                decoding="async"
+                width={64}
+                height={64}
+              />
               
               <div className="cart-item-details">
                 <h3 className="cart-item-name">{item.product.name}</h3>
@@ -87,15 +98,16 @@ export const Cart: React.FC = () => {
                 onClick={() => removeFromCart(item.id)}
                 className="cart-item-delete-btn"
                 title="Remove item"
+                aria-label={`Remove ${item.product.name} from shopping cart`}
               >
-                <Trash2 size={18} />
+                <Trash2 size={18} aria-hidden="true" />
               </button>
             </div>
           ))}
         </div>
 
         {/* Right Column: Checkout Form */}
-        <aside className="checkout-summary-section glass-panel">
+        <aside className="checkout-summary-section glass-panel" aria-label="Order summary and shipping form">
           <h3>Order Summary</h3>
           
           <div className="summary-row">
@@ -107,35 +119,41 @@ export const Cart: React.FC = () => {
             <span className="highlight">{formatPrice(totalPrice)}</span>
           </div>
 
-          <form onSubmit={handlePlaceOrder} className="checkout-form">
+          <form onSubmit={handlePlaceOrder} className="checkout-form" aria-label="Customer Checkout Details">
             <div className="form-group">
-              <label><MapPin size={14} /> Shipping Address</label>
+              <label htmlFor="checkout-address"><MapPin size={14} aria-hidden="true" /> Shipping Address</label>
               <textarea 
+                id="checkout-address"
+                name="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Enter complete house number, street address, area pincode..."
                 rows={3}
                 className="form-control"
                 required
+                autoComplete="street-address"
               ></textarea>
             </div>
 
             <div className="form-group">
-              <label><Phone size={14} /> Contact Phone</label>
+              <label htmlFor="checkout-phone"><Phone size={14} aria-hidden="true" /> Contact Phone</label>
               <input 
+                id="checkout-phone"
+                name="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. +91 99887 76655"
                 className="form-control"
                 required
+                autoComplete="tel"
               />
             </div>
 
             <div className="payment-notice glass-card" style={{ padding: '1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontWeight: 600, marginBottom: '0.4rem' }}>
-                <CreditCard size={18} />
-                <span>Direct Seller Payout & Checkout</span>
+                <CreditCard size={18} aria-hidden="true" />
+                <span>Direct Seller Payout &amp; Checkout</span>
               </div>
               <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
                 Pay directly via seller's UPI / Bank / QR code or select Cash on Delivery. Order status will be updated by gym owner upon dispatch.
@@ -146,6 +164,7 @@ export const Cart: React.FC = () => {
               type="submit" 
               disabled={isSubmitting} 
               className="glow-btn checkout-submit-btn"
+              aria-label={isSubmitting ? 'Placing your order...' : 'Confirm and place order'}
             >
               {isSubmitting ? 'Placing Order...' : 'Confirm & Place Order'}
             </button>

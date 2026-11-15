@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { Dumbbell, CreditCard, ShoppingBag, Heart, Calendar, Mail, MapPin } from 'lucide-react';
 
 interface Subscription {
@@ -113,12 +114,19 @@ export const DashboardCustomer: React.FC = () => {
 
   return (
     <div className="customer-dashboard-container container">
+      <SEO title="Member Dashboard & Active Passes" canonicalPath="/dashboard/customer" noindex={true} />
       {/* 1. PROFILE HEADER */}
-      <section className="profile-banner-card glass-panel">
-        <img src={user?.avatar} alt="Avatar" className="profile-large-avatar" />
+      <section className="profile-banner-card glass-panel" aria-label="Customer Profile Summary">
+        <img 
+          src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=75'} 
+          alt={`${user?.name || 'Customer'}'s profile avatar`} 
+          className="profile-large-avatar" 
+          width={72}
+          height={72}
+        />
         <div className="profile-meta">
           <h2>{user?.name}</h2>
-          <p className="profile-email"><Mail size={14} /> {user?.email}</p>
+          <p className="profile-email"><Mail size={14} aria-hidden="true" /> {user?.email}</p>
           <div className="role-tag">CUSTOMER</div>
         </div>
         <div className="dashboard-quick-stats">
@@ -138,9 +146,14 @@ export const DashboardCustomer: React.FC = () => {
       </section>
 
       {errorMsg && (
-        <div className="error-alert-bar" style={{ margin: '1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="error-alert-bar" role="alert" style={{ margin: '1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>⚠️ {errorMsg}</span>
-          <button type="button" onClick={loadDashboardData} style={{ background: 'var(--primary-color)', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+          <button 
+            type="button" 
+            onClick={loadDashboardData} 
+            style={{ background: 'var(--primary-color)', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+            aria-label="Retry loading dashboard data"
+          >
             Retry
           </button>
         </div>
@@ -153,20 +166,28 @@ export const DashboardCustomer: React.FC = () => {
         <div className="main-feed-column">
           
           {/* Active Memberships */}
-          <section className="dashboard-block-panel glass-panel">
-            <h2><CreditCard size={18} /> My Memberships</h2>
+          <section className="dashboard-block-panel glass-panel" aria-label="Active Gym Memberships">
+            <h2><CreditCard size={18} aria-hidden="true" /> My Memberships</h2>
             
             {activeSubs.length === 0 ? (
               <div className="empty-feed-card text-center">
-                <Dumbbell size={32} className="text-muted" />
+                <Dumbbell size={32} className="text-muted" aria-hidden="true" />
                 <p>No active memberships found.</p>
-                <Link to="/gyms" className="glow-btn">Discover Gyms</Link>
+                <Link to="/gyms" className="glow-btn" aria-label="Discover gyms and purchase a membership pass">Discover Gyms</Link>
               </div>
             ) : (
               <div className="subs-list">
                 {activeSubs.map(sub => (
-                  <div key={sub.id} className="sub-dashboard-card glass-card">
-                    <img src={sub.gym.logo} alt="Logo" className="gym-logo-sub" />
+                  <article key={sub.id} className="sub-dashboard-card glass-card">
+                    <img 
+                      src={sub.gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=80&q=75'} 
+                      alt={`${sub.gym.name} brand logo`} 
+                      className="gym-logo-sub" 
+                      width={48}
+                      height={48}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className="sub-info">
                       <div className="sub-title-row">
                         <h3>{sub.gym.name}</h3>
@@ -175,7 +196,7 @@ export const DashboardCustomer: React.FC = () => {
                       <p className="sub-plan-name">Plan: <b>{sub.plan.name}</b> (Paid: ₹{sub.pricePaid})</p>
                       
                       <div className="sub-dates-row">
-                        <Calendar size={14} />
+                        <Calendar size={14} aria-hidden="true" />
                         <span>Valid: {new Date(sub.startDate).toLocaleDateString()} - <b>{new Date(sub.endDate).toLocaleDateString()}</b></span>
                       </div>
                     </div>
@@ -183,28 +204,29 @@ export const DashboardCustomer: React.FC = () => {
                     <button 
                       onClick={() => handleCancelSub(sub.id)}
                       className="btn-secondary cancel-sub-btn"
+                      aria-label={`Cancel active subscription for ${sub.gym.name}`}
                     >
                       Cancel
                     </button>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
           </section>
 
           {/* E-Store Orders History */}
-          <section className="dashboard-block-panel glass-panel">
-            <h2><ShoppingBag size={18} /> Product Orders ({orders.length})</h2>
+          <section className="dashboard-block-panel glass-panel" aria-label="Product Order History">
+            <h2><ShoppingBag size={18} aria-hidden="true" /> Product Orders ({orders.length})</h2>
             
             {orders.length === 0 ? (
               <div className="empty-feed-card text-center">
                 <p className="text-muted">No shopping orders found.</p>
-                <Link to="/store" className="btn-secondary">Visit Gym Store</Link>
+                <Link to="/store" className="btn-secondary" aria-label="Browse the gym accessories store">Visit Gym Store</Link>
               </div>
             ) : (
               <div className="orders-feed-list">
                 {orders.map(order => (
-                  <div key={order.id} className="order-dashboard-card glass-card">
+                  <article key={order.id} className="order-dashboard-card glass-card">
                     <div className="order-card-header">
                       <div>
                         <h4>Order #{order.id.substring(0, 8)}</h4>
@@ -218,7 +240,14 @@ export const DashboardCustomer: React.FC = () => {
                     <div className="order-items-preview">
                       {order.items.map(item => (
                         <div key={item.id} className="order-item-inline">
-                          <img src={item.product.image} alt="product" />
+                          <img 
+                            src={item.product.image || 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=60&q=75'} 
+                            alt={`${item.product.name} product photo`} 
+                            width={36}
+                            height={36}
+                            loading="lazy"
+                            decoding="async"
+                          />
                           <div>
                             <h5>{item.product.name}</h5>
                             <span className="item-qty">Qty: {item.quantity} × ₹{item.pricePaid}</span>
@@ -231,7 +260,7 @@ export const DashboardCustomer: React.FC = () => {
                       <span>Total Price Paid:</span>
                       <span className="price-bold">₹{order.totalPrice.toFixed(2)}</span>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
@@ -239,9 +268,9 @@ export const DashboardCustomer: React.FC = () => {
         </div>
 
         {/* Right sidebar: Favorite Gyms */}
-        <aside className="dashboard-sidebar-column">
+        <aside className="dashboard-sidebar-column" aria-label="Saved Favorite Gyms">
           <section className="dashboard-block-panel glass-panel">
-            <h2><Heart size={18} /> Favorites ({favorites.length})</h2>
+            <h2><Heart size={18} aria-hidden="true" /> Favorites ({favorites.length})</h2>
             
             {favorites.length === 0 ? (
               <p className="text-muted text-center" style={{ padding: '2rem 0' }}>No saved gyms.</p>
@@ -249,11 +278,19 @@ export const DashboardCustomer: React.FC = () => {
               <div className="favorites-list-sidebar">
                 {favorites.map(gym => (
                   <div key={gym.id} className="fav-sidebar-card glass-card">
-                    <img src={gym.logo} alt="Logo" className="fav-logo" />
+                    <img 
+                      src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=60&q=75'} 
+                      alt={`${gym.name} logo`} 
+                      className="fav-logo" 
+                      width={36}
+                      height={36}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className="fav-info">
                       <h4>{gym.name}</h4>
-                      <p><MapPin size={12} /> {gym.city}</p>
-                      <Link to={`/gyms/${gym.id}`} className="view-fav-link">
+                      <p><MapPin size={12} aria-hidden="true" /> {gym.city}</p>
+                      <Link to={`/gyms/${gym.id}`} className="view-fav-link" aria-label={`View profile for ${gym.name}`}>
                         View Profile
                       </Link>
                     </div>

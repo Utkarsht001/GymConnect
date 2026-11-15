@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { Bell, ChevronLeft } from 'lucide-react';
 
 interface NotificationItem {
@@ -52,17 +53,23 @@ export const Notifications: React.FC = () => {
 
   return (
     <div className="notifications-page-container container" style={{ paddingTop: '90px', paddingBottom: '80px', maxWidth: '800px' }}>
+      <SEO title="Notifications & Alerts" canonicalPath="/notifications" noindex={true} />
       <div className="notifications-card glass-panel" style={{ padding: '2rem', borderRadius: '12px' }}>
         <div className="header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Bell size={24} className="text-primary" />
+            <Bell size={24} className="text-primary" aria-hidden="true" />
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Notifications & Alerts</h2>
+              <h1 style={{ margin: 0, fontSize: '1.4rem' }}>Notifications &amp; Alerts</h1>
               <small className="text-muted">Stay updated with messages, gym news, and order updates</small>
             </div>
           </div>
-          <button onClick={() => navigate(-1)} className="btn-secondary flex-center" style={{ gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
-            <ChevronLeft size={16} /> Back
+          <button 
+            onClick={() => navigate(-1)} 
+            className="btn-secondary flex-center" 
+            style={{ gap: '0.3rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+            aria-label="Go back to previous page"
+          >
+            <ChevronLeft size={16} aria-hidden="true" /> Back
           </button>
         </div>
 

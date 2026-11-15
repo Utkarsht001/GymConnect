@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { SEO } from '../components/SEO';
 import { MapPin, Phone, Mail, Clock, ShieldCheck, Heart, MessageSquare, Star, ArrowRight, UserCheck, Image as ImageIcon, Calendar } from 'lucide-react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface GymDetailsData {
   id: string;
@@ -225,19 +227,31 @@ export const GymDetails: React.FC = () => {
 
   return (
     <div className="gym-details-page">
+      <SEO 
+        title={`${gym.name} - Facilities, Membership Plans & Reviews`}
+        description={`Explore ${gym.name} in ${gym.city}. View membership plans starting from ${gym.plans?.[0] ? `₹${gym.plans[0].price}` : '₹999'}, amenities, equipment photos, and member reviews on GymConnect.`}
+        canonicalPath={`/gyms/${id}`}
+      />
+
       {/* 1. COVER HERO HEADER */}
-      <section className="gym-hero-header" style={{ backgroundImage: `url(${gym.coverImage})` }}>
-        <div className="hero-overlay"></div>
+      <section className="gym-hero-header" style={{ backgroundImage: `url(${gym.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80'})` }} aria-label={`${gym.name} Cover Banner`}>
+        <div className="hero-overlay" aria-hidden="true"></div>
         <div className="container gym-header-container">
           <div className="header-info-block">
-            <img src={gym.logo} alt="Logo" className="gym-detail-logo" />
+            <img 
+              src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=120&q=75'} 
+              alt={`${gym.name} official logo`} 
+              className="gym-detail-logo" 
+              width={64}
+              height={64}
+            />
             <div className="gym-detail-title-row">
               <h1 className="gym-detail-name glow-text">{gym.name}</h1>
               <p className="gym-detail-location">
-                <MapPin size={16} /> {gym.address}, {gym.city}
+                <MapPin size={16} aria-hidden="true" /> {gym.address}, {gym.city}
               </p>
               <div className="gym-ratings-row">
-                <Star className="star-icon" />
+                <Star className="star-icon" aria-hidden="true" />
                 <span className="avg-rating">{getAvgRating()}</span>
                 <span className="reviews-count">({gym.reviews.length} customer reviews)</span>
               </div>
@@ -245,11 +259,19 @@ export const GymDetails: React.FC = () => {
           </div>
 
           <div className="header-actions-block">
-            <button onClick={toggleFavorite} className={`btn-secondary fav-toggle-btn ${isFavorite ? 'favorite' : ''}`}>
-              <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} /> {isFavorite ? 'Saved' : 'Favorite'}
+            <button 
+              onClick={toggleFavorite} 
+              className={`btn-secondary fav-toggle-btn ${isFavorite ? 'favorite' : ''}`}
+              aria-label={isFavorite ? `Remove ${gym.name} from favorite gyms` : `Save ${gym.name} to favorite gyms`}
+            >
+              <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" /> {isFavorite ? 'Saved' : 'Favorite'}
             </button>
-            <button onClick={handleStartChat} className="glow-btn chat-trigger-btn">
-              <MessageSquare size={18} /> Chat with Gym
+            <button 
+              onClick={handleStartChat} 
+              className="glow-btn chat-trigger-btn"
+              aria-label={`Start direct chat with ${gym.name} management`}
+            >
+              <MessageSquare size={18} aria-hidden="true" /> Chat with Gym
             </button>
           </div>
         </div>
@@ -334,7 +356,12 @@ export const GymDetails: React.FC = () => {
               <div className="gallery-grid">
                 {getFilteredPhotos().map(pic => (
                   <div key={pic.id} className="gallery-img-wrapper">
-                    <img src={pic.url} alt="Gallery" />
+                    <img 
+                      src={pic.url} 
+                      alt={`${gym.name} ${pic.category.toLowerCase()} photo`} 
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <span className="gallery-category-badge">{pic.category}</span>
                   </div>
                 ))}
@@ -388,8 +415,9 @@ export const GymDetails: React.FC = () => {
                     <button 
                       onClick={() => handleSubscribe(plan.id)} 
                       className="glow-btn purchase-plan-btn"
+                      aria-label={`Subscribe to ${plan.name} membership plan for ${formatPrice(plan.price)}`}
                     >
-                      Subscribe Now <ArrowRight size={16} />
+                      Subscribe Now <ArrowRight size={16} aria-hidden="true" />
                     </button>
                   </div>
                 ))}
@@ -406,7 +434,13 @@ export const GymDetails: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: gym.paymentQrCode ? '180px 1fr' : '1fr', gap: '1.5rem', alignItems: 'center' }}>
                   {gym.paymentQrCode && (
                     <div style={{ textAlign: 'center', background: '#0b0d10', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                      <img src={gym.paymentQrCode} alt="Gym Payment QR Code" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '6px' }} />
+                      <img 
+                        src={gym.paymentQrCode} 
+                        alt={`${gym.name} official payment QR code`} 
+                        style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '6px' }} 
+                        loading="lazy"
+                        decoding="async"
+                      />
                       <span style={{ fontSize: '0.7rem', color: '#00ffcc', display: 'block', marginTop: '0.4rem', fontWeight: 600 }}>Scan with GPay/PhonePe/Paytm</span>
                     </div>
                   )}
@@ -455,14 +489,17 @@ export const GymDetails: React.FC = () => {
             
             {/* Create review form (For active customers) */}
             {user && user.role === 'CUSTOMER' && (
-              <form onSubmit={handleReviewSubmit} className="add-review-form glass-card">
+              <form onSubmit={handleReviewSubmit} className="add-review-form glass-card" aria-label={`Write a review for ${gym.name}`}>
                 <h3>Write a Review</h3>
                 <div className="form-group">
-                  <label>Rating (Stars)</label>
+                  <label htmlFor="review-rating-select">Rating (Stars)</label>
                   <select 
+                    id="review-rating-select"
+                    name="rating"
                     value={ratingInput} 
                     onChange={(e) => setRatingInput(parseInt(e.target.value))}
                     className="form-control"
+                    aria-label="Rating in stars out of 5"
                   >
                     <option value="5">★★★★★ (5 Stars)</option>
                     <option value="4">★★★★☆ (4 Stars)</option>
@@ -472,38 +509,53 @@ export const GymDetails: React.FC = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Review Comment</label>
+                  <label htmlFor="review-comment-field">Review Comment</label>
                   <textarea 
+                    id="review-comment-field"
+                    name="comment"
                     value={commentInput} 
                     onChange={(e) => setCommentInput(e.target.value)}
                     placeholder="Describe your workout experience, trainers feedback, locker cleanliness..."
                     rows={4}
                     className="form-control"
                     required
+                    aria-label="Your workout experience and feedback"
                   ></textarea>
                 </div>
-                <button type="submit" disabled={submittingReview} className="glow-btn submit-review-btn">
-                  Submit Review
+                <button 
+                  type="submit" 
+                  disabled={submittingReview} 
+                  className="glow-btn submit-review-btn"
+                  aria-label={submittingReview ? 'Submitting your review...' : 'Submit your gym review'}
+                >
+                  {submittingReview ? 'Submitting...' : 'Submit Review'}
                 </button>
               </form>
             )}
 
             {/* Review list */}
-            <div className="reviews-feed">
+            <div className="reviews-feed" role="feed" aria-label="Customer Reviews">
               {gym.reviews.length === 0 ? (
                 <p className="text-muted">No member reviews yet. Be the first to share your training session feedback!</p>
               ) : (
                 gym.reviews.map(rev => (
-                  <div key={rev.id} className="review-feed-card glass-card">
+                  <article key={rev.id} className="review-feed-card glass-card">
                     <div className="review-card-header">
                       <div className="reviewer-info">
-                        <img src={rev.customer.avatar} alt="Avatar" />
+                        <img 
+                          src={rev.customer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'} 
+                          alt={`${rev.customer.name}'s profile avatar`} 
+                          loading="lazy"
+                          decoding="async"
+                          width={40}
+                          height={40}
+                        />
                         <div>
                           <h4>{rev.customer.name}</h4>
                           <span className="date-span">{new Date(rev.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <span className="stars-badge">★ {rev.rating}</span>
+                      <span className="stars-badge" aria-label={`${rev.rating} out of 5 stars`}>★ {rev.rating}</span>
                     </div>
                     <p className="review-comment-body">{rev.comment}</p>
 
@@ -511,7 +563,7 @@ export const GymDetails: React.FC = () => {
                     {rev.ownerReply ? (
                       <div className="owner-reply-card glass-panel">
                         <div className="reply-header">
-                          <UserCheck size={14} className="text-primary" />
+                          <UserCheck size={14} className="text-primary" aria-hidden="true" />
                           <h5>Response from Gym Owner:</h5>
                         </div>
                         <p>{rev.ownerReply}</p>
@@ -526,17 +578,19 @@ export const GymDetails: React.FC = () => {
                             value={replyInputs[rev.id] || ''}
                             onChange={(e) => setReplyInputs({ ...replyInputs, [rev.id]: e.target.value })}
                             className="form-control reply-input-field"
+                            aria-label={`Reply to review by ${rev.customer.name}`}
                           />
                           <button 
                             onClick={() => handleReplySubmit(rev.id)} 
                             className="glow-btn reply-btn"
+                            aria-label={`Send response to ${rev.customer.name}`}
                           >
                             Send
                           </button>
                         </div>
                       )
                     )}
-                  </div>
+                  </article>
                 ))
               )}
             </div>

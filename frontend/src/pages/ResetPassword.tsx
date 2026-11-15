@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { Dumbbell, Lock, KeyRound, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
@@ -90,11 +91,12 @@ export const ResetPassword: React.FC = () => {
 
   return (
     <div className="reset-page-container flex-center">
+      <SEO title="Reset Password" canonicalPath="/reset-password" noindex={true} />
       <div className="reset-card-wrapper glass-panel">
         
         {/* Header */}
         <div className="text-center" style={{ marginBottom: '1.75rem' }}>
-          <Dumbbell className="logo-icon animate-float" style={{ color: 'var(--primary-color)', width: 44, height: 44, marginBottom: '0.5rem' }} />
+          <Dumbbell className="logo-icon animate-float" aria-hidden="true" style={{ color: 'var(--primary-color)', width: 44, height: 44, marginBottom: '0.5rem' }} />
           <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.35rem 0' }}>Reset Password</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
             {targetEmail ? `Create a new password for ${targetEmail}` : 'GymConnect Secure Password Recovery'}
@@ -103,30 +105,30 @@ export const ResetPassword: React.FC = () => {
 
         {/* Verifying state */}
         {verifying && (
-          <div className="text-center" style={{ padding: '2rem 1rem' }}>
-            <KeyRound className="animate-spin text-primary" size={36} style={{ margin: '0 auto 1rem auto' }} />
+          <div className="text-center" role="status" aria-live="polite" style={{ padding: '2rem 1rem' }}>
+            <KeyRound className="animate-spin text-primary" size={36} aria-hidden="true" style={{ margin: '0 auto 1rem auto' }} />
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Verifying your reset security token...</p>
           </div>
         )}
 
         {/* Invalid or Expired Token State */}
         {!verifying && !tokenValid && !success && (
-          <div className="token-invalid-box text-center">
-            <AlertCircle size={44} style={{ color: 'var(--status-error)', margin: '0 auto 1rem auto' }} />
+          <div className="token-invalid-box text-center" role="alert">
+            <AlertCircle size={44} aria-hidden="true" style={{ color: 'var(--status-error)', margin: '0 auto 1rem auto' }} />
             <h4 style={{ color: '#fff', margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>Reset Link Invalid or Expired</h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
               {tokenError || 'This password reset link is invalid, has already been used, or has expired after 15 minutes.'}
             </p>
-            <Link to="/login" className="glow-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-              Return to Login & Request New Link <ArrowRight size={16} />
+            <Link to="/login" className="glow-btn" aria-label="Return to login page and request a new reset link" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+              Return to Login &amp; Request New Link <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
         )}
 
         {/* Success State */}
         {success && (
-          <div className="reset-success-box text-center" style={{ padding: '1rem 0' }}>
-            <CheckCircle size={48} style={{ color: 'var(--primary-color)', margin: '0 auto 1rem auto' }} />
+          <div className="reset-success-box text-center" role="status" aria-live="polite" style={{ padding: '1rem 0' }}>
+            <CheckCircle size={48} aria-hidden="true" style={{ color: 'var(--primary-color)', margin: '0 auto 1rem auto' }} />
             <h3 style={{ color: '#fff', margin: '0 0 0.5rem 0' }}>Password Reset Successful!</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
               Your password has been securely updated. You can now log into your GymConnect account with your new password.
@@ -137,18 +139,19 @@ export const ResetPassword: React.FC = () => {
             <button
               onClick={() => navigate('/login')}
               className="glow-btn"
+              aria-label="Sign in now with your updated password"
               style={{ marginTop: '1rem', width: '100%' }}
             >
-              Sign In Now <ArrowRight size={16} />
+              Sign In Now <ArrowRight size={16} aria-hidden="true" />
             </button>
           </div>
         )}
 
         {/* Valid Token - Reset Form */}
         {!verifying && tokenValid && !success && (
-          <form onSubmit={handleSubmit} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <form onSubmit={handleSubmit} className="auth-form" aria-label="Password Reset Form" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {errorMsg && (
-              <div className="error-alert-bar" style={{
+              <div className="error-alert-bar" role="alert" style={{
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '1px solid var(--status-error)',
                 color: 'var(--status-error)',
@@ -162,10 +165,12 @@ export const ResetPassword: React.FC = () => {
             )}
 
             <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                <Lock size={14} /> New Password
+              <label htmlFor="reset-new-password" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                <Lock size={14} aria-hidden="true" /> New Password
               </label>
               <input
+                id="reset-new-password"
+                name="newPassword"
                 type="password"
                 placeholder="Enter new password (min. 6 characters)"
                 value={newPassword}
@@ -173,15 +178,18 @@ export const ResetPassword: React.FC = () => {
                 className="form-control"
                 required
                 minLength={6}
+                autoComplete="new-password"
                 autoFocus
               />
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                <Lock size={14} /> Confirm New Password
+              <label htmlFor="reset-confirm-password" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                <Lock size={14} aria-hidden="true" /> Confirm New Password
               </label>
               <input
+                id="reset-confirm-password"
+                name="confirmPassword"
                 type="password"
                 placeholder="Confirm your new password"
                 value={confirmPassword}
@@ -189,6 +197,7 @@ export const ResetPassword: React.FC = () => {
                 className="form-control"
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
 
@@ -196,6 +205,7 @@ export const ResetPassword: React.FC = () => {
               type="submit"
               disabled={submitting}
               className="glow-btn"
+              aria-label={submitting ? 'Saving your new password...' : 'Save new password and continue'}
               style={{
                 width: '100%',
                 padding: '0.85rem',
@@ -206,7 +216,7 @@ export const ResetPassword: React.FC = () => {
                 gap: '0.5rem'
               }}
             >
-              {submitting ? 'Updating Password...' : 'Save New Password & Continue'} <ArrowRight size={18} />
+              {submitting ? 'Updating Password...' : 'Save New Password & Continue'} <ArrowRight size={18} aria-hidden="true" />
             </button>
 
             <div className="text-center" style={{ marginTop: '0.5rem' }}>

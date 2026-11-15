@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { Shield, Check, X, Users, Dumbbell, Trash2, UserCheck, AlertTriangle, Briefcase, MessageSquare, Settings } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 
@@ -343,6 +344,7 @@ export const DashboardAdmin: React.FC = () => {
 
   return (
     <div className="admin-dashboard-container container">
+      <SEO title="System Administrator Cockpit" canonicalPath="/dashboard/admin" noindex={true} />
       {/* 1. ADMIN HEADER */}
       <section className="profile-banner-card glass-panel">
         <Shield className="profile-large-avatar text-primary" style={{ width: '70px', height: '70px' }} />
@@ -454,7 +456,7 @@ export const DashboardAdmin: React.FC = () => {
           <div className="gyms-admin-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {gyms.map(gym => (
               <div key={gym.id} className="pending-gym-row-card glass-card" style={{ display: 'flex', gap: '1.25rem', padding: '1.25rem', alignItems: 'flex-start' }}>
-                <img src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} alt="Logo" style={{ width: '70px', height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
+                <img src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} alt={`${gym.name} brand logo`} loading="lazy" decoding="async" width={70} height={70} style={{ width: '70px', height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
                 
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -575,7 +577,7 @@ export const DashboardAdmin: React.FC = () => {
                   <tr key={u.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <img src={u.avatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=user'} alt="Avatar" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+                        <img src={u.avatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=user'} alt={`${u.name}'s profile avatar`} width={36} height={36} loading="lazy" decoding="async" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
                         <div>
                           <b>{u.name}</b><br/>
                           <span className="table-meta-text">{u.email}</span>
@@ -628,7 +630,7 @@ export const DashboardAdmin: React.FC = () => {
               {usersList.filter(u => u.role === 'EMPLOYEE').map(emp => (
                 <div key={emp.id} className="pending-gym-row-card glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <img src={emp.avatar} alt="Avatar" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
+                    <img src={emp.avatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=user'} alt={`${emp.name}'s profile avatar`} width={48} height={48} loading="lazy" decoding="async" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <h4 style={{ margin: 0 }}>{emp.name}</h4>
@@ -845,7 +847,7 @@ export const DashboardAdmin: React.FC = () => {
                   <tr key={prod.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <img src={prod.image} alt="Product" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
+                        <img src={prod.image} alt={`${prod.name} product photo`} width={40} height={40} loading="lazy" decoding="async" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
                         <b>{prod.name}</b>
                       </div>
                     </td>
@@ -969,7 +971,7 @@ export const DashboardAdmin: React.FC = () => {
             {adminQrCode && (
               <div style={{ textAlign: 'center', padding: '1rem', background: '#0b0d10', borderRadius: '8px', border: '1px solid var(--border-color)', maxWidth: '220px' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Active Admin QR Preview:</span>
-                <img src={adminQrCode} alt="Admin Payment QR" style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', borderRadius: '6px' }} />
+                <img src={adminQrCode} alt="Admin Payment QR code" width={180} height={180} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', borderRadius: '6px' }} />
               </div>
             )}
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { io, Socket } from 'socket.io-client';
 import { MessageSquare, Send, User, ChevronLeft, Smile, Image as ImageIcon, X } from 'lucide-react';
 
@@ -193,28 +194,30 @@ export const Chat: React.FC = () => {
   if (!user) {
     return (
       <div className="chat-page-container container text-center flex-center" style={{ height: '70vh' }}>
-        <MessageSquare size={64} className="text-muted" />
+        <SEO title="Access Denied - Chat" canonicalPath="/chat" noindex={true} />
+        <MessageSquare size={64} className="text-muted" aria-hidden="true" />
         <h2>Access Denied</h2>
         <p>Please log in to chat with gym owners.</p>
-        <button onClick={() => navigate('/login')} className="glow-btn">Login Page</button>
+        <button onClick={() => navigate('/login')} className="glow-btn" aria-label="Go to login page">Login Page</button>
       </div>
     );
   }
 
   return (
     <div className="chat-page-container container">
+      <SEO title="Direct Messages & Real-Time Chat" canonicalPath="/chat" noindex={true} />
       <div className="chat-interface-wrapper glass-panel">
         
         {/* SIDEBAR: CONVERSATIONS LIST */}
-        <aside className={`chat-channels-sidebar ${activeConversation ? 'chat-active' : ''}`}>
+        <aside className={`chat-channels-sidebar ${activeConversation ? 'chat-active' : ''}`} aria-label="Conversation Channels">
           <div className="sidebar-header">
             <h3>Conversations</h3>
           </div>
           
-          <div className="channels-list">
+          <div className="channels-list" role="list">
             {conversations.length === 0 ? (
               <div className="empty-channels text-center">
-                <User size={32} className="text-muted" />
+                <User size={32} className="text-muted" aria-hidden="true" />
                 <p>No active chats. Start a conversation from a gym profile page.</p>
               </div>
             ) : (
@@ -223,13 +226,25 @@ export const Chat: React.FC = () => {
                   key={conv.otherUser.id}
                   onClick={() => setActiveConversation(conv)}
                   className={`channel-item ${activeConversation?.otherUser.id === conv.otherUser.id ? 'active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Conversation with ${conv.otherUser.name}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveConversation(conv); }}
                 >
-                  <img src={conv.otherUser.avatar} alt="Avatar" className="channel-avatar" />
+                  <img 
+                    src={conv.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'} 
+                    alt={`${conv.otherUser.name}'s avatar`} 
+                    className="channel-avatar" 
+                    loading="lazy"
+                    decoding="async"
+                    width={40}
+                    height={40}
+                  />
                   <div className="channel-info">
                     <div className="channel-title-row">
                       <h4>{conv.otherUser.name}</h4>
                       {conv.unreadCount > 0 && (
-                        <span className="unread-bubble">{conv.unreadCount}</span>
+                        <span className="unread-bubble" aria-label={`${conv.unreadCount} unread messages`}>{conv.unreadCount}</span>
                       )}
                     </div>
                     <p className="channel-last-msg">
@@ -243,16 +258,26 @@ export const Chat: React.FC = () => {
         </aside>
 
         {/* FEED PANEL: ACTIVE CHAT SCREEN */}
-        <main className={`chat-messages-viewport ${!activeConversation ? 'empty-thread' : ''}`}>
+        <section className={`chat-messages-viewport ${!activeConversation ? 'empty-thread' : ''}`} aria-label="Active Chat Conversation">
           {activeConversation ? (
             <>
               {/* Thread Header */}
               <div className="thread-header">
-                <button onClick={() => setActiveConversation(null)} className="back-channels-btn">
-                  <ChevronLeft size={20} /> Back
+                <button 
+                  onClick={() => setActiveConversation(null)} 
+                  className="back-channels-btn"
+                  aria-label="Back to conversations list"
+                >
+                  <ChevronLeft size={20} aria-hidden="true" /> Back
                 </button>
                 <div className="thread-user-info">
-                  <img src={activeConversation.otherUser.avatar} alt="Avatar" className="thread-avatar" />
+                  <img 
+                    src={activeConversation.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=75'} 
+                    alt={`${activeConversation.otherUser.name}'s profile avatar`} 
+                    className="thread-avatar" 
+                    width={40}
+                    height={40}
+                  />
                   <div>
                     <h4>{activeConversation.otherUser.name}</h4>
                     <span className="user-role-badge">{activeConversation.otherUser.role}</span>
@@ -294,15 +319,20 @@ export const Chat: React.FC = () => {
                 <div className="chat-image-preview-bar glass-card">
                   <img src={selectedImage} alt="Attachment Preview" className="preview-attachment-thumb" />
                   <span className="text-secondary" style={{ fontSize: '0.8rem' }}>Image ready to send</span>
-                  <button type="button" onClick={() => setSelectedImage(null)} className="clear-attachment-btn">
-                    <X size={14} />
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedImage(null)} 
+                    className="clear-attachment-btn"
+                    aria-label="Remove image attachment"
+                  >
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
               )}
 
               {/* Emoji Picker Popover */}
               {showEmojiPicker && (
-                <div className="emoji-picker-popover glass-panel">
+                <div className="emoji-picker-popover glass-panel" role="region" aria-label="Emoji Picker">
                   <div className="emoji-grid">
                     {EMOJI_LIST.map((emoji, idx) => (
                       <button 
@@ -310,6 +340,7 @@ export const Chat: React.FC = () => {
                         type="button" 
                         onClick={() => handleInsertEmoji(emoji)}
                         className="emoji-btn"
+                        aria-label={`Insert emoji ${emoji}`}
                       >
                         {emoji}
                       </button>
@@ -319,14 +350,15 @@ export const Chat: React.FC = () => {
               )}
 
               {/* Input Form */}
-              <form onSubmit={handleSendMessage} className="message-input-form">
+              <form onSubmit={handleSendMessage} className="message-input-form" aria-label="Send Message Form">
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className={`chat-action-btn ${showEmojiPicker ? 'active' : ''}`}
                   title="Choose Emoji"
+                  aria-label="Open emoji picker"
                 >
-                  <Smile size={18} />
+                  <Smile size={18} aria-hidden="true" />
                 </button>
 
                 <button
@@ -334,8 +366,9 @@ export const Chat: React.FC = () => {
                   onClick={() => fileInputRef.current?.click()}
                   className="chat-action-btn"
                   title="Attach Saved Image"
+                  aria-label="Attach image from device"
                 >
-                  <ImageIcon size={18} />
+                  <ImageIcon size={18} aria-hidden="true" />
                 </button>
 
                 <input
@@ -344,28 +377,38 @@ export const Chat: React.FC = () => {
                   onChange={handleChatFileChange}
                   accept="image/*"
                   style={{ display: 'none' }}
+                  aria-label="Upload chat image attachment"
                 />
 
+                <label htmlFor="chat-message-field" className="sr-only">Type your message</label>
                 <input 
+                  id="chat-message-field"
+                  name="chatMessage"
                   type="text" 
                   placeholder="Type your message here..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   className="form-control msg-input-box"
+                  aria-label="Type your message here"
+                  autoComplete="off"
                 />
-                <button type="submit" className="glow-btn send-msg-btn">
-                  <Send size={16} />
+                <button 
+                  type="submit" 
+                  className="glow-btn send-msg-btn"
+                  aria-label="Send chat message"
+                >
+                  <Send size={16} aria-hidden="true" />
                 </button>
               </form>
             </>
           ) : (
             <div className="no-active-conversation flex-center text-center">
-              <MessageSquare size={64} className="empty-icon animate-float" />
+              <MessageSquare size={64} className="empty-icon animate-float" aria-hidden="true" />
               <h3>Select a Conversation</h3>
               <p>Choose an active chat from the sidebar or visit the Find Gyms directory to contact an owner.</p>
             </div>
           )}
-        </main>
+        </section>
       </div>
 
       <style>{`

@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { SEO } from '../components/SEO';
 import { Search, MapPin, SlidersHorizontal, Map as MapIcon, List as ListIcon, X, Info, Navigation, Loader2 } from 'lucide-react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface Gym {
   id: string;
@@ -259,26 +261,40 @@ export const GymDiscovery: React.FC = () => {
 
   return (
     <div className="discovery-page-container">
+      <SEO 
+        title="Find Gyms Near You - Interactive Map & Pricing"
+        description="Search, filter, and compare verified fitness centers in Jaipur and other cities. View live amenities, monthly membership prices, and trainer ratings on Leaflet OpenStreetMap."
+        canonicalPath="/gyms"
+      />
+
       {/* Search Header */}
-      <section className="search-header-container glass-panel">
+      <section className="search-header-container glass-panel" aria-label="Gym search and location filter">
         <div className="discovery-search-row">
           <div className="search-input-wrapper">
-            <Search className="search-icon" />
+            <label htmlFor="discovery-search-field" className="sr-only">Search gyms by title, address, specialties</label>
+            <Search className="search-icon" aria-hidden="true" />
             <input 
-              type="text" 
+              id="discovery-search-field"
+              name="search"
+              type="search" 
               placeholder="Search gyms by title, address, specialties..." 
               value={searchInput}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="search-input-field"
+              aria-label="Search gyms by title, address, specialties"
             />
           </div>
 
           <div className="select-wrapper">
-            <MapPin className="select-icon" />
+            <label htmlFor="discovery-city-select" className="sr-only">Filter by city</label>
+            <MapPin className="select-icon" aria-hidden="true" />
             <select
+              id="discovery-city-select"
+              name="city"
               value={cityInput}
               onChange={(e) => handleFilterChange('city', e.target.value)}
               className="filter-select"
+              aria-label="Filter gyms by city"
             >
               <option value="">All Cities</option>
               <option value="Jaipur">Jaipur</option>
@@ -295,16 +311,19 @@ export const GymDiscovery: React.FC = () => {
             disabled={locatingUser}
             className="glow-btn near-me-btn flex-center"
             style={{ gap: '0.4rem', whiteSpace: 'nowrap', padding: '0.65rem 1.1rem', fontSize: '0.85rem' }}
+            aria-label="Detect GPS coordinates and sort gyms nearest to my location"
           >
-            {locatingUser ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+            {locatingUser ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Navigation size={16} aria-hidden="true" />}
             {userLocation ? 'Location Active (Nearest First)' : 'Find Gyms Near Me'}
           </button>
 
           <button 
             onClick={() => setShowFiltersMobile(!showFiltersMobile)} 
             className="filter-toggle-mobile btn-secondary"
+            aria-label="Toggle filter options panel"
+            aria-expanded={showFiltersMobile}
           >
-            <SlidersHorizontal size={18} /> Filters
+            <SlidersHorizontal size={18} aria-hidden="true" /> Filters
           </button>
         </div>
       </section>
@@ -315,21 +334,24 @@ export const GymDiscovery: React.FC = () => {
         <div className={`listings-column ${mobileView === 'list' ? 'active' : ''}`}>
           
           {/* Filters Panel (Desktop Sidebar / Mobile Modal) */}
-          <aside className={`filters-sidebar glass-panel ${showFiltersMobile ? 'show' : ''}`}>
+          <aside className={`filters-sidebar glass-panel ${showFiltersMobile ? 'show' : ''}`} aria-label="Gym search filters">
             <div className="sidebar-header">
               <h3>Filter Options</h3>
               <button 
                 onClick={() => setShowFiltersMobile(false)} 
                 className="close-filters-btn"
+                aria-label="Close filters drawer"
               >
-                <X size={20} />
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
             {/* Filter Group: Facilities */}
             <div className="filter-group">
-              <label>Amenities</label>
+              <label htmlFor="facility-filter-select">Amenities</label>
               <select
+                id="facility-filter-select"
+                name="facility"
                 value={facilityInput}
                 onChange={(e) => handleFilterChange('facility', e.target.value)}
                 className="form-control"
@@ -343,41 +365,55 @@ export const GymDiscovery: React.FC = () => {
 
             {/* Filter Group: Price */}
             <div className="filter-group">
-              <label>Price Range (Monthly)</label>
+              <span className="filter-group-title" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Price Range (Monthly)</span>
               <div className="price-inputs">
+                <label htmlFor="min-price-input" className="sr-only">Minimum monthly price</label>
                 <input 
+                  id="min-price-input"
+                  name="minPrice"
                   type="number" 
                   placeholder="Min" 
                   value={minPriceInput}
                   onChange={(e) => handleFilterChange('minPrice', e.target.value)}
                   className="form-control"
+                  aria-label="Minimum price in Rupees"
                 />
-                <span>-</span>
+                <span aria-hidden="true">-</span>
+                <label htmlFor="max-price-input" className="sr-only">Maximum monthly price</label>
                 <input 
+                  id="max-price-input"
+                  name="maxPrice"
                   type="number" 
                   placeholder="Max" 
                   value={maxPriceInput}
                   onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
                   className="form-control"
+                  aria-label="Maximum price in Rupees"
                 />
               </div>
             </div>
 
             {/* Filter Group: Rating */}
             <div className="filter-group">
-              <label>Minimum Rating</label>
+              <label htmlFor="rating-filter-select">Minimum Rating</label>
               <select
+                id="rating-filter-select"
+                name="rating"
                 value={minRatingInput}
                 onChange={(e) => handleFilterChange('rating', e.target.value)}
                 className="form-control"
               >
                 <option value="">Any Rating</option>
-                <option value="4">★★★★☆ & Up</option>
-                <option value="4.5">★★★★★ & Up (4.5+)</option>
+                <option value="4">★★★★☆ &amp; Up</option>
+                <option value="4.5">★★★★★ &amp; Up (4.5+)</option>
               </select>
             </div>
 
-            <button onClick={clearFilters} className="btn-secondary clear-filters-btn">
+            <button 
+              onClick={clearFilters} 
+              className="btn-secondary clear-filters-btn"
+              aria-label="Reset all search filters"
+            >
               Reset Filters
             </button>
           </aside>
@@ -385,27 +421,43 @@ export const GymDiscovery: React.FC = () => {
           {/* List panel */}
           <div className="gyms-list-container">
             {loading ? (
-              <div className="list-loading-state">
+              <div className="list-loading-state" aria-busy="true" aria-label="Loading search results">
                 <div className="skeleton-item"></div>
                 <div className="skeleton-item"></div>
                 <div className="skeleton-item"></div>
               </div>
             ) : gyms.length === 0 ? (
               <div className="empty-results text-center">
-                <Info size={48} className="text-muted" />
+                <Info size={48} className="text-muted" aria-hidden="true" />
                 <h3>No gyms match your criteria</h3>
                 <p>Try widening your search terms or clearing your location filters.</p>
-                <button onClick={clearFilters} className="glow-btn">Reset All Filters</button>
+                <button onClick={clearFilters} className="glow-btn" aria-label="Reset all search filters">Reset All Filters</button>
               </div>
             ) : (
               <div className="list-scroll-wrapper">
-                <p className="results-count">{gyms.length} gyms found near you</p>
+                <p className="results-count" aria-live="polite">{gyms.length} gyms found near you</p>
                 {gyms.map(gym => (
-                  <div key={gym.id} className="gym-list-row-card glass-panel">
-                    <img src={gym.coverImage} alt={gym.name} className="list-card-cover" />
+                  <article key={gym.id} className="gym-list-row-card glass-panel">
+                    <img 
+                      src={gym.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=75'} 
+                      alt={`${gym.name} facility`} 
+                      className="list-card-cover" 
+                      loading="lazy"
+                      decoding="async"
+                      width={280}
+                      height={180}
+                    />
                     <div className="list-card-details">
                       <div className="list-card-header">
-                        <img src={gym.logo} alt="Logo" className="list-card-logo" />
+                        <img 
+                          src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=80&q=75'} 
+                          alt={`${gym.name} logo`} 
+                          className="list-card-logo" 
+                          loading="lazy"
+                          decoding="async"
+                          width={40}
+                          height={40}
+                        />
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <h3 className="list-card-title" style={{ margin: 0 }}>{gym.name}</h3>
@@ -421,10 +473,10 @@ export const GymDiscovery: React.FC = () => {
                             )}
                           </div>
                           <p className="list-card-address">
-                            <MapPin size={12} /> {gym.address}, {gym.city}
+                            <MapPin size={12} aria-hidden="true" /> {gym.address}, {gym.city}
                             {gym.distanceKm !== undefined && (
                               <span className="distance-badge-tag">
-                                <Navigation size={10} /> {gym.distanceKm} km away
+                                <Navigation size={10} aria-hidden="true" /> {gym.distanceKm} km away
                               </span>
                             )}
                           </p>
@@ -442,15 +494,19 @@ export const GymDiscovery: React.FC = () => {
 
                       <div className="list-card-footer">
                         <div>
-                          <span className="rating-tag">★ {getAvgRating(gym.reviews)}</span>
+                          <span className="rating-tag" aria-label={`Rating: ${getAvgRating(gym.reviews)} out of 5 stars`}>★ {getAvgRating(gym.reviews)}</span>
                           <span className="starting-price">Starts at {formatPrice(getStartingPriceNum(gym.plans))}/mo</span>
                         </div>
-                        <Link to={`/gyms/${gym.id}`} className="glow-btn view-btn">
+                        <Link 
+                          to={`/gyms/${gym.id}`} 
+                          className="glow-btn view-btn"
+                          aria-label={`View details and membership plans for ${gym.name}`}
+                        >
                           View Details
                         </Link>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
@@ -459,7 +515,7 @@ export const GymDiscovery: React.FC = () => {
 
         {/* RIGHT COLUMN: LEAFLET MAP VIEW */}
         <div className={`map-column ${mobileView === 'map' ? 'active' : ''}`}>
-          <div ref={mapRef} id="leaflet-map-discovery" className="leaflet-map-element"></div>
+          <div ref={mapRef} id="leaflet-map-discovery" className="leaflet-map-element" role="application" aria-label="Interactive Gym Map"></div>
         </div>
       </div>
 
@@ -468,14 +524,16 @@ export const GymDiscovery: React.FC = () => {
         <button 
           onClick={() => setMobileView('list')} 
           className={`toggle-tab-btn ${mobileView === 'list' ? 'active' : ''}`}
+          aria-label="Switch to gym list view"
         >
-          <ListIcon size={18} /> List View
+          <ListIcon size={18} aria-hidden="true" /> List View
         </button>
         <button 
           onClick={() => setMobileView('map')} 
           className={`toggle-tab-btn ${mobileView === 'map' ? 'active' : ''}`}
+          aria-label="Switch to interactive map view"
         >
-          <MapIcon size={18} /> Map View
+          <MapIcon size={18} aria-hidden="true" /> Map View
         </button>
       </div>
 

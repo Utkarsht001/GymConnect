@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { SEO } from '../components/SEO';
 import { Search, ShoppingBag, ShoppingCart, Tag } from 'lucide-react';
 
 interface Product {
@@ -55,30 +56,43 @@ export const GymStore: React.FC = () => {
 
   return (
     <div className="store-page-container container">
+      <SEO 
+        title="Fitness Store - Supplements, Apparel & Workout Gear"
+        description="Premium athletic accessories, certified whey protein, workout bands, and fitness apparel sold directly by verified GymConnect partner gyms."
+        canonicalPath="/store"
+      />
+
       {/* 1. STORE HERO SEARCH HEADER */}
-      <section className="store-hero glass-panel text-center">
-        <h1 className="glow-text">GYM<span className="highlight">GO Store</span></h1>
+      <section className="store-hero glass-panel text-center" aria-label="GymConnect Store search banner">
+        <h1 className="glow-text">Gym<span className="highlight">Connect Store</span></h1>
         <p>Premium training accessories, supplements, and workout gear listed directly by gym owners.</p>
         
         <div className="store-search-box">
-          <Search className="search-icon" />
+          <label htmlFor="store-search-field" className="sr-only">Search accessories, protein bars, wrist bands</label>
+          <Search className="search-icon" aria-hidden="true" />
           <input 
-            type="text" 
+            id="store-search-field"
+            name="storeSearch"
+            type="search" 
             placeholder="Search accessories, protein bars, wrist bands..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="form-control store-search-input"
+            aria-label="Search accessories, protein bars, wrist bands"
           />
         </div>
       </section>
 
       {/* 2. CATEGORY SELECTOR TABS */}
-      <div className="store-categories-row">
+      <div className="store-categories-row" role="tablist" aria-label="Product categories">
         {['ALL', 'EQUIPMENT', 'SUPPLEMENTS', 'ACCESSORIES', 'APPAREL'].map(cat => (
           <button 
             key={cat} 
+            role="tab"
+            aria-selected={selectedCategory === cat}
             onClick={() => setSelectedCategory(cat)}
             className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
+            aria-label={`Show ${cat} products`}
           >
             {cat}
           </button>
@@ -87,28 +101,36 @@ export const GymStore: React.FC = () => {
 
       {/* 3. PRODUCT GRID */}
       {loading ? (
-        <div className="loading-grid">
+        <div className="loading-grid" aria-busy="true" aria-label="Loading products">
           <div className="skeleton-card" style={{ height: '320px' }}></div>
           <div className="skeleton-card" style={{ height: '320px' }}></div>
           <div className="skeleton-card" style={{ height: '320px' }}></div>
         </div>
       ) : products.length === 0 ? (
         <div className="empty-store flex-center text-center">
-          <ShoppingBag size={48} className="text-muted" />
+          <ShoppingBag size={48} className="text-muted" aria-hidden="true" />
           <h3>No fitness accessories listed</h3>
           <p>Try switching categories or clearing search keywords.</p>
         </div>
       ) : (
-        <div className="products-grid-layout">
+        <div className="products-grid-layout" role="region" aria-label="Product Catalog">
           {products.map(prod => {
             const finalPrice = getDiscountedPrice(prod.price, prod.discount);
             const hasDiscount = prod.discount > 0;
             const isOutOfStock = prod.stock <= 0;
 
             return (
-              <div key={prod.id} className="product-item-card glass-card">
+              <article key={prod.id} className="product-item-card glass-card">
                 <div className="product-image-wrapper">
-                  <img src={prod.image} alt={prod.name} className="product-thumbnail" />
+                  <img 
+                    src={prod.image || 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=400&q=75'} 
+                    alt={`${prod.name} product photo`} 
+                    className="product-thumbnail" 
+                    loading="lazy"
+                    decoding="async"
+                    width={300}
+                    height={200}
+                  />
                   {prod.isPromoted && (
                     <span className="badge" style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(255, 183, 3, 0.9)', color: '#000', fontWeight: 700, fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '4px', zIndex: 2 }}>
                       🔥 Promoted Ad
@@ -116,7 +138,7 @@ export const GymStore: React.FC = () => {
                   )}
                   {hasDiscount && (
                     <span className="discount-tag">
-                      <Tag size={12} /> {prod.discount}% OFF
+                      <Tag size={12} aria-hidden="true" /> {prod.discount}% OFF
                     </span>
                   )}
                   {isOutOfStock && (
@@ -147,11 +169,12 @@ export const GymStore: React.FC = () => {
                     onClick={() => addToCart(prod.id)}
                     disabled={isOutOfStock}
                     className="glow-btn add-to-cart-btn"
+                    aria-label={isOutOfStock ? `${prod.name} is out of stock` : `Add ${prod.name} to Cart`}
                   >
-                    <ShoppingCart size={16} /> Add to Cart
+                    <ShoppingCart size={16} aria-hidden="true" /> Add to Cart
                   </button>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>

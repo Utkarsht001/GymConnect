@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SEO } from '../components/SEO';
 import { Dumbbell, CreditCard, ShoppingBag, ClipboardList, Settings, Sparkles, MapPin, Trash2, Check, TrendingUp, Users, DollarSign, Calendar, Search, Navigation, Loader2 } from 'lucide-react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { ImageInput } from '../components/ImageInput';
 
 // Configure Leaflet default marker icons for Vite
@@ -594,6 +596,7 @@ export const DashboardOwner: React.FC = () => {
 
   return (
     <div className="owner-dashboard-container container">
+      <SEO title="Gym Owner Management Center" canonicalPath="/dashboard/owner" noindex={true} />
       {/* Sidebar Nav & Main Panel wrapper */}
       <div className="owner-dashboard-layout">
         
@@ -1276,7 +1279,10 @@ export const DashboardOwner: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                           <img 
                             src={prod.image} 
-                            alt="thumb" 
+                            alt={`${prod.name} product thumbnail`} 
+                            width={48}
+                            height={48}
+                            loading="lazy"
                             style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }} 
                           />
                           <div>
@@ -1351,7 +1357,7 @@ export const DashboardOwner: React.FC = () => {
                         <div className="order-items-preview">
                           {order.items.map((item, idx) => (
                             <div key={idx} className="order-item-inline">
-                              <img src={item.image} alt="product" />
+                              <img src={item.image} alt={`${item.productName} preview`} width={40} height={40} loading="lazy" />
                               <div>
                                 <h5>{item.productName}</h5>
                                 <span className="item-qty">Qty: {item.quantity} × ₹{item.pricePaid}</span>
@@ -1528,7 +1534,7 @@ export const DashboardOwner: React.FC = () => {
                   {paymentQrCode && (
                     <div style={{ textAlign: 'center', padding: '1rem', background: '#0b0d10', borderRadius: '8px', border: '1px solid var(--border-color)', maxWidth: '240px' }}>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Active Payment QR Preview:</span>
-                      <img src={paymentQrCode} alt="Payment QR Code" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
+                      <img src={paymentQrCode} alt="Gym Owner Payment QR Code" width={200} height={200} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
                     </div>
                   )}
 
@@ -1570,7 +1576,7 @@ export const DashboardOwner: React.FC = () => {
                 {platformSettings.adminQrCode && (
                   <div style={{ textAlign: 'center', background: '#0b0d10', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Scan Admin QR Code to Pay:</span>
-                    <img src={platformSettings.adminQrCode} alt="Admin QR Code" style={{ width: '180px', height: '180px', objectFit: 'contain', margin: '0 auto', borderRadius: '8px', border: '1px solid #fff' }} />
+                    <img src={platformSettings.adminQrCode} alt="Platform Admin Subscription QR Code" width={180} height={180} style={{ width: '180px', height: '180px', objectFit: 'contain', margin: '0 auto', borderRadius: '8px', border: '1px solid #fff' }} />
                   </div>
                 )}
 

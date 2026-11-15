@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { SEO } from '../components/SEO';
 import { Briefcase, MessageSquare, AlertTriangle, Clock, Check, ShieldCheck, Dumbbell, DollarSign } from 'lucide-react';
 
 interface GymRecord {
@@ -107,6 +108,7 @@ export const DashboardEmployee: React.FC = () => {
 
   return (
     <div className="employee-dashboard-container container">
+      <SEO title="Staff Roster & Support Portal" canonicalPath="/dashboard/employee" noindex={true} />
       {/* 1. EMPLOYEE HEADER */}
       <section className="profile-banner-card glass-panel flex-center" style={{ justifyContent: 'flex-start', padding: '2rem', gap: '1.5rem', borderRadius: '12px' }}>
         <Briefcase className="text-primary" style={{ width: '64px', height: '64px' }} />
@@ -291,7 +293,7 @@ export const DashboardEmployee: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {gyms.map(gym => (
               <div key={gym.id} className="glass-card" style={{ display: 'flex', gap: '1.25rem', padding: '1.25rem', alignItems: 'flex-start', borderRadius: '8px' }}>
-                <img src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} alt="Logo" style={{ width: '65px', height: '65px', borderRadius: '8px', objectFit: 'cover' }} />
+                <img src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} alt={`${gym.name} logo`} width={65} height={65} loading="lazy" decoding="async" style={{ width: '65px', height: '65px', borderRadius: '8px', objectFit: 'cover' }} />
 
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>

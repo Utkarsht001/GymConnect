@@ -3,8 +3,97 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <title>GYMGO | Multi-Gym Discovery & Management</title>
+    <meta name="theme-color" content="#0b0d10" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Primary SEO Metadata -->
+    <title>GymConnect | Multi-Gym Discovery, Memberships &amp; Fitness Store</title>
+    <meta name="description" content="Discover top verified fitness centers in Jaipur, compare membership plans, shop athletic supplements and workout gear, and connect with certified trainers on GymConnect." />
+    <meta name="keywords" content="gyms in jaipur, gym membership, gym discovery, fitness gear, whey protein, gymconnect, gym plans" />
+    <link rel="canonical" href="https://gym-connect-six.vercel.app/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://gym-connect-six.vercel.app/" />
+    <meta property="og:site_name" content="GymConnect" />
+    <meta property="og:title" content="GymConnect | Multi-Gym Discovery, Memberships &amp; Fitness Store" />
+    <meta property="og:description" content="Discover top verified fitness centers in Jaipur, compare membership plans, shop athletic supplements and workout gear, and connect with certified trainers." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://gym-connect-six.vercel.app/" />
+    <meta name="twitter:title" content="GymConnect | Multi-Gym Discovery, Memberships &amp; Fitness Store" />
+    <meta name="twitter:description" content="Discover top verified fitness centers in Jaipur, compare membership plans, shop athletic supplements and workout gear." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80" />
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!-- Performance Optimizations: DNS-Prefetch & Preconnect -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://images.unsplash.com" />
+
+    <!-- Optimized Font Loading -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" />
+
+    <!-- Preload Above-the-fold Largest Contentful Paint (LCP) Hero Image -->
+    <link 
+      rel="preload" 
+      as="image" 
+      href="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80&fm=webp" 
+      fetchpriority="high"
+      type="image/webp"
+    />
+
+    <!-- Structured Data (JSON-LD) for Search Engines & AI Browsing Agents -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://gym-connect-six.vercel.app/#website",
+          "url": "https://gym-connect-six.vercel.app/",
+          "name": "GymConnect",
+          "description": "Jaipur's premier multi-gym discovery, membership management, and fitness marketplace platform.",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://gym-connect-six.vercel.app/gyms?search={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://gym-connect-six.vercel.app/#organization",
+          "name": "GymConnect",
+          "url": "https://gym-connect-six.vercel.app/",
+          "logo": "https://gym-connect-six.vercel.app/favicon.svg",
+          "sameAs": [
+            "https://github.com/Utkarsht001/GymConnect"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "Customer Support",
+            "telephone": "+91-9450558546",
+            "email": "support@gymconnect.com",
+            "areaServed": "IN",
+            "availableLanguage": ["English", "Hindi"]
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

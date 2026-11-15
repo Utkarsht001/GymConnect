@@ -131,32 +131,42 @@ export const CustomerSupportChatbot: React.FC = () => {
         <button 
           onClick={() => setIsOpen(true)}
           className="chatbot-trigger-btn glow-btn flex-center animate-pulse"
-          title="GYMGO AI Customer Support"
+          title="GymConnect AI Customer Support"
+          aria-label="Open 24/7 GymConnect Customer Support Assistant"
         >
-          <Bot size={22} />
+          <Bot size={22} aria-hidden="true" />
           <span>Support Bot</span>
         </button>
       )}
 
       {/* Chatbot Window */}
       {isOpen && (
-        <div className="chatbot-window-panel glass-panel">
+        <section 
+          className="chatbot-window-panel glass-panel"
+          role="dialog"
+          aria-label="GymConnect 24/7 Support Assistant"
+        >
           {/* Header */}
           <div className="chatbot-header flex-center">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Bot size={20} className="text-primary" />
+              <Bot size={20} className="text-primary" aria-hidden="true" />
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.95rem' }}>GYMGO Assistant</h4>
-                <small className="text-muted" style={{ fontSize: '0.7rem' }}>24/7 AI & Support Ticket Desk</small>
+                <h3 style={{ margin: 0, fontSize: '0.95rem' }}>GymConnect Assistant</h3>
+                <small className="text-muted" style={{ fontSize: '0.7rem' }}>24/7 AI &amp; Support Ticket Desk</small>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="close-chatbot-btn">
-              <X size={18} />
+            <button 
+              onClick={() => setIsOpen(false)} 
+              className="close-chatbot-btn"
+              title="Close support chat"
+              aria-label="Close support chat window"
+            >
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
           {/* Messages scroll feed */}
-          <div className="chatbot-feed-area">
+          <div className="chatbot-feed-area" role="log" aria-live="polite" aria-label="Support chat conversation">
             {messages.map(msg => (
               <div key={msg.id} className={`chatbot-msg-row ${msg.sender === 'user' ? 'user-row' : 'bot-row'}`}>
                 <div className="chatbot-msg-bubble">
@@ -169,6 +179,7 @@ export const CustomerSupportChatbot: React.FC = () => {
                         key={idx}
                         onClick={() => handleUserOptionClick(opt.action, opt.label)}
                         className="chatbot-option-btn"
+                        aria-label={opt.label}
                       >
                         {opt.label}
                       </button>
@@ -180,20 +191,30 @@ export const CustomerSupportChatbot: React.FC = () => {
           </div>
 
           {/* Text Input */}
-          <form onSubmit={handleSendText} className="chatbot-input-bar">
+          <form onSubmit={handleSendText} className="chatbot-input-bar" aria-label="Type message to support">
+            <label htmlFor="chatbot-text-input" className="sr-only">Ask a question or report a problem</label>
             <input 
+              id="chatbot-text-input"
+              name="supportMessage"
               type="text" 
               placeholder="Ask a question or report a problem..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="form-control"
               style={{ fontSize: '0.8rem', padding: '0.5rem 0.8rem' }}
+              aria-label="Ask a question or report a problem"
+              autoComplete="off"
             />
-            <button type="submit" className="glow-btn" style={{ padding: '0.5rem 0.8rem' }}>
-              <Send size={14} />
+            <button 
+              type="submit" 
+              className="glow-btn" 
+              style={{ padding: '0.5rem 0.8rem' }}
+              aria-label="Send message to support bot"
+            >
+              <Send size={14} aria-hidden="true" />
             </button>
           </form>
-        </div>
+        </section>
       )}
 
       <style>{`
