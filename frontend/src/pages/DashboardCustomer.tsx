@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SEO } from '../components/SEO';
-import { Dumbbell, CreditCard, ShoppingBag, Heart, Calendar, Mail, MapPin } from 'lucide-react';
+import { Dumbbell, CreditCard, ShoppingBag, Heart, Calendar, Mail, MapPin, MessageSquare } from 'lucide-react';
 
 interface Subscription {
   id: string;
@@ -11,7 +11,7 @@ interface Subscription {
   pricePaid: number;
   status: string;
   plan: { name: string; durationDays: number };
-  gym: { id: string; name: string; logo: string; city: string; address: string };
+  gym: { id: string; name: string; logo: string; city: string; address: string; ownerId?: string };
 }
 
 interface Order {
@@ -44,6 +44,7 @@ export const DashboardCustomer: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [favorites, setFavorites] = useState<Gym[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -59,7 +60,15 @@ export const DashboardCustomer: React.FC = () => {
       const ords = await apiFetch('/api/orders/my');
       setOrders(ords || []);
 
-      // 3. Fetch favorites from localStorage list
+      // 3. Fetch conversations
+      try {
+        const convs = await apiFetch('/api/messages/conversations');
+        setConversations(convs || []);
+      } catch (e) {
+        console.warn('Could not fetch conversations:', e);
+      }
+
+      // 4. Fetch favorites from localStorage list
       const favIds = JSON.parse(localStorage.getItem('fithub_favorites') || '[]');
       if (favIds.length > 0) {
         const allGyms = await apiFetch('/api/gyms');
@@ -138,6 +147,10 @@ export const DashboardCustomer: React.FC = () => {
             <span className="count">{orders.length}</span>
             <span className="label">Store Orders</span>
           </div>
+          <div className="stat-bubble" onClick={() => navigate('/chat')} style={{ cursor: 'pointer' }} title="Open Live Chat">
+            <span className="count" style={{ color: '#00ffcc' }}>{conversations.length}</span>
+            <span className="label">Messages</span>
+          </div>
           <div className="stat-bubble">
             <span className="count">{favorites.length}</span>
             <span className="label">Favorites</span>
@@ -201,13 +214,24 @@ export const DashboardCustomer: React.FC = () => {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => handleCancelSub(sub.id)}
-                      className="btn-secondary cancel-sub-btn"
-                      aria-label={`Cancel active subscription for ${sub.gym.name}`}
-                    >
-                      Cancel
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0 }}>
+                      <button 
+                        onClick={() => navigate(`/chat`, { state: { startChatWith: { id: sub.gym.ownerId || sub.gym.id, name: sub.gym.name, avatar: sub.gym.logo, role: 'GYM_OWNER', gymName: sub.gym.name, gymId: sub.gym.id } } })}
+                        className="glow-btn flex-center"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', gap: '0.25rem' }}
+                        aria-label={`Chat with ${sub.gym.name} owner`}
+                      >
+                        <MessageSquare size={12} aria-hidden="true" /> Message Gym
+                      </button>
+                      <button 
+                        onClick={() => handleCancelSub(sub.id)}
+                        className="btn-secondary cancel-sub-btn"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
+                        aria-label={`Cancel active subscription for ${sub.gym.name}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -267,8 +291,64 @@ export const DashboardCustomer: React.FC = () => {
           </section>
         </div>
 
-        {/* Right sidebar: Favorite Gyms */}
-        <aside className="dashboard-sidebar-column" aria-label="Saved Favorite Gyms">
+        {/* Right sidebar: Messages & Favorite Gyms */}
+        <aside className="dashboard-sidebar-column" aria-label="Customer Communications and Saved Gyms">
+          
+          {/* Gym Conversations Panel */}
+          <section className="dashboard-block-panel glass-panel" style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem' }}><MessageSquare size={16} aria-hidden="true" /> Gym Chats ({conversations.length})</h2>
+              <button onClick={() => navigate('/chat')} className="glow-btn" style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}>
+                Open Chat
+              </button>
+            </div>
+
+            {conversations.length === 0 ? (
+              <p className="text-muted text-center" style={{ padding: '1.5rem 0', fontSize: '0.85rem' }}>
+                No active conversations yet. Click "Chat with Gym" on any gym profile.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {conversations.slice(0, 4).map(c => (
+                  <div 
+                    key={c.otherUser.id}
+                    onClick={() => navigate('/chat', { state: { startChatWith: c.otherUser } })}
+                    className="fav-sidebar-card glass-card"
+                    style={{ cursor: 'pointer', padding: '0.6rem 0.75rem' }}
+                  >
+                    <img 
+                      src={c.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'} 
+                      alt={c.otherUser.name} 
+                      className="fav-logo" 
+                      width={32} 
+                      height={32} 
+                    />
+                    <div className="fav-info" style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.otherUser.name}
+                        </h4>
+                        {c.unreadCount > 0 && (
+                          <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.35rem', borderRadius: '999px' }}>
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      {c.otherUser.gymName && (
+                        <span style={{ fontSize: '0.7rem', color: '#00ffcc', display: 'block' }}>
+                          {c.otherUser.gymName}
+                        </span>
+                      )}
+                      <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.lastMessage || 'Click to view messages'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section className="dashboard-block-panel glass-panel">
             <h2><Heart size={18} aria-hidden="true" /> Favorites ({favorites.length})</h2>
             

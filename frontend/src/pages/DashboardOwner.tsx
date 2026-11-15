@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SEO } from '../components/SEO';
-import { Dumbbell, CreditCard, ShoppingBag, ClipboardList, Settings, Sparkles, MapPin, Trash2, Check, TrendingUp, Users, DollarSign, Calendar, Search, Navigation, Loader2 } from 'lucide-react';
+import { Dumbbell, CreditCard, ShoppingBag, ClipboardList, Settings, Sparkles, MapPin, Trash2, Check, TrendingUp, Users, DollarSign, Calendar, Search, Navigation, Loader2, AlertTriangle, X, MessageSquare } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ImageInput } from '../components/ImageInput';
@@ -31,6 +31,9 @@ interface Gym {
   coverImage: string;
   openingHours: string;
   isApproved: boolean;
+  approvalStatus?: string;
+  rejectionReason?: string;
+  reviewedAt?: string;
   upiId?: string;
   bankAccountNumber?: string;
   bankIfsc?: string;
@@ -74,7 +77,7 @@ export const DashboardOwner: React.FC = () => {
   const navigate = useNavigate();
 
   // Active sub-dashboard section
-  const [activeTab, setActiveTab] = useState<'overview' | 'mygym' | 'facilities' | 'plans' | 'products' | 'orders' | 'updates' | 'payout'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mygym' | 'facilities' | 'plans' | 'products' | 'orders' | 'updates' | 'payout' | 'messages'>('overview');
   
   // Dashboard records
   const [gym, setGym] = useState<Gym | null>(null);
@@ -82,6 +85,7 @@ export const DashboardOwner: React.FC = () => {
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [ownerConversations, setOwnerConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form states: Payout & QR Code
@@ -278,6 +282,14 @@ export const DashboardOwner: React.FC = () => {
         const ords = await apiFetch('/api/orders/my');
         setOrders(ords || []);
 
+        // Fetch customer conversations
+        try {
+          const convs = await apiFetch('/api/messages/conversations');
+          setOwnerConversations(convs || []);
+        } catch (e) {
+          console.warn('Could not fetch conversations:', e);
+        }
+
         // Fetch platform settings for subscription renewal
         try {
           const platSettings = await apiFetch('/api/subscriptions/platform-payment');
@@ -423,7 +435,8 @@ export const DashboardOwner: React.FC = () => {
       logo: gymLogo,
       coverImage: gymCover,
       openingHours: gymHours,
-      freeTrialDays: Number(freeTrialDays)
+      freeTrialDays: Number(freeTrialDays),
+      ...(gym?.approvalStatus === 'REJECTED' ? { resubmitForApproval: true } : {})
     };
 
     try {
@@ -433,7 +446,11 @@ export const DashboardOwner: React.FC = () => {
           method: 'PUT',
           body: JSON.stringify(payload)
         });
-        alert('Gym profile updated successfully!');
+        if (gym.approvalStatus === 'REJECTED') {
+          alert('Gym profile updated and successfully resubmitted for admin verification!');
+        } else {
+          alert('Gym profile updated successfully!');
+        }
       } else {
         // Create
         await apiFetch('/api/gyms', {
@@ -594,6 +611,8 @@ export const DashboardOwner: React.FC = () => {
   const totalRevenue = subscriptions.reduce((acc, sub) => acc + sub.pricePaid, 0) +
                        orders.reduce((acc, o) => o.status !== 'CANCELLED' ? acc + o.totalPrice : acc, 0);
 
+  const ownerUnreadCount = ownerConversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+
   return (
     <div className="owner-dashboard-container container">
       <SEO title="Gym Owner Management Center" canonicalPath="/dashboard/owner" noindex={true} />
@@ -606,8 +625,33 @@ export const DashboardOwner: React.FC = () => {
             <Dumbbell className="text-primary" />
             <h3>GYMGO Owner</h3>
             {gym ? (
-              <span className={`badge badge-${gym.isApproved ? 'approved' : 'pending'}`}>
-                {gym.isApproved ? 'Approved' : 'Pending Approval'}
+              <span 
+                className="badge" 
+                style={{
+                  background: gym.approvalStatus === 'APPROVED' && gym.isApproved 
+                    ? 'rgba(0, 255, 204, 0.15)' 
+                    : gym.approvalStatus === 'REJECTED' 
+                      ? 'rgba(239, 68, 68, 0.2)' 
+                      : 'rgba(255, 183, 3, 0.2)',
+                  color: gym.approvalStatus === 'APPROVED' && gym.isApproved 
+                    ? '#00ffcc' 
+                    : gym.approvalStatus === 'REJECTED' 
+                      ? '#ef4444' 
+                      : '#ffb703',
+                  border: `1px solid ${
+                    gym.approvalStatus === 'APPROVED' && gym.isApproved 
+                      ? 'rgba(0,255,204,0.3)' 
+                      : gym.approvalStatus === 'REJECTED' 
+                        ? 'rgba(239,68,68,0.4)' 
+                        : 'rgba(255,183,3,0.4)'
+                  }`
+                }}
+              >
+                {gym.approvalStatus === 'APPROVED' && gym.isApproved 
+                  ? 'Approved' 
+                  : gym.approvalStatus === 'REJECTED' 
+                    ? 'Needs Revision' 
+                    : 'Pending Approval'}
               </span>
             ) : (
               <span className="badge badge-pending">Gym Profile Missing</span>
@@ -620,6 +664,17 @@ export const DashboardOwner: React.FC = () => {
               className={`sidebar-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
             >
               <TrendingUp size={16} /> Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab('messages')} 
+              className={`sidebar-tab-btn ${activeTab === 'messages' ? 'active' : ''}`}
+            >
+              <MessageSquare size={16} /> Member Inquiries
+              {ownerUnreadCount > 0 && (
+                <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '9999px', fontWeight: 'bold' }}>
+                  {ownerUnreadCount}
+                </span>
+              )}
             </button>
             <button 
               onClick={() => setActiveTab('mygym')} 
@@ -672,6 +727,53 @@ export const DashboardOwner: React.FC = () => {
           {/* TAB: OVERVIEW ANALYTICS */}
           {activeTab === 'overview' && (
             <div className="overview-tab-panel">
+              {/* Gym Approval Status Notification Banners */}
+              {gym && (gym.approvalStatus === 'PENDING' || (!gym.isApproved && gym.approvalStatus !== 'REJECTED')) && (
+                <div className="glass-card" style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255, 183, 3, 0.5)', background: 'linear-gradient(135deg, rgba(255, 183, 3, 0.12) 0%, rgba(15,23,42,0.85) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                    <AlertTriangle size={30} style={{ color: '#ffb703', flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <h3 style={{ margin: 0, color: '#ffb703', fontSize: '1.1rem' }}>
+                        Your Gym Registration is Under Admin Review
+                      </h3>
+                      <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.88rem', color: '#f1f5f9', lineHeight: 1.5 }}>
+                        Your gym listing for <b>"{gym.name}"</b> is currently under administrative verification. You will be notified once the verification process is completed. It will automatically become visible in search and discovery upon approval.
+                      </p>
+                      <span style={{ display: 'inline-block', marginTop: '0.5rem', fontSize: '0.75rem', color: '#ffb703', background: 'rgba(255, 183, 3, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: 600 }}>
+                        ⏳ Status: PENDING VERIFICATION
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {gym && gym.approvalStatus === 'REJECTED' && (
+                <div className="glass-card" style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.6)', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(15,23,42,0.85) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                    <X size={30} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <h3 style={{ margin: 0, color: '#ef4444', fontSize: '1.1rem' }}>
+                        Gym Listing Needs Revision
+                      </h3>
+                      <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.88rem', color: '#f1f5f9', lineHeight: 1.5 }}>
+                        Your gym listing for <b>"{gym.name}"</b> was reviewed by our verification team and requires revision before it can go live.
+                      </p>
+                      {gym.rejectionReason && (
+                        <div style={{ margin: '0.75rem 0', padding: '0.75rem 1rem', background: '#0b0d14', borderLeft: '4px solid #ef4444', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Administrator Note / Reason:</span>
+                          <p style={{ margin: '0.25rem 0 0 0', color: '#fff', fontSize: '0.88rem' }}>"{gym.rejectionReason}"</p>
+                        </div>
+                      )}
+                      <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        Please go to <b>My Gym Setup</b>, make the requested adjustments, and click <b>Resubmit for Approval</b>.
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveTab('mygym')} className="glow-btn" style={{ fontSize: '0.85rem', padding: '0.6rem 1.2rem', borderColor: '#ef4444' }}>
+                    Update & Resubmit
+                  </button>
+                </div>
+              )}
               {!gym && (
                 <div className="glass-card" style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255, 183, 3, 0.4)', background: 'linear-gradient(135deg, rgba(255, 183, 3, 0.1) 0%, rgba(15,23,42,0.7) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
@@ -969,7 +1071,11 @@ export const DashboardOwner: React.FC = () => {
                 </div>
 
                 <button type="submit" className="glow-btn save-gym-btn">
-                  Save Gym Profile
+                  {gym?.approvalStatus === 'REJECTED' 
+                    ? 'Save & Resubmit for Admin Approval' 
+                    : gym 
+                      ? 'Update Gym Profile' 
+                      : 'Submit Gym for Admin Approval'}
                 </button>
               </form>
             </div>
@@ -1545,6 +1651,92 @@ export const DashboardOwner: React.FC = () => {
               </div>
             </div>
             )
+          )}
+
+          {/* TAB: MEMBER MESSAGES & INQUIRIES */}
+          {activeTab === 'messages' && (
+            <div className="messages-owner-panel">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 className="panel-title" style={{ margin: 0 }}>Member Messages & Inquiries</h2>
+                  <p className="text-secondary" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
+                    Direct questions from potential gym members and active pass holders about timings, facilities, and personal training.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => navigate('/chat')} 
+                  className="glow-btn flex-center"
+                  style={{ gap: '0.5rem', fontSize: '0.85rem' }}
+                >
+                  <MessageSquare size={16} /> Open Full Live Chat
+                </button>
+              </div>
+
+              {ownerConversations.length === 0 ? (
+                <div className="glass-card text-center" style={{ padding: '3.5rem 1.5rem', borderRadius: '12px' }}>
+                  <MessageSquare size={48} className="text-muted" style={{ margin: '0 auto 1rem' }} />
+                  <h3>No Customer Conversations Yet</h3>
+                  <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>
+                    When visitors or members click "Chat with Gym" on your gym profile, their messages will appear here in real-time.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {ownerConversations.map(conv => (
+                    <div 
+                      key={conv.otherUser.id} 
+                      className="glass-card" 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        padding: '1.25rem', 
+                        borderRadius: '10px',
+                        border: conv.unreadCount > 0 ? '1px solid rgba(0, 255, 204, 0.4)' : '1px solid var(--border-color)',
+                        background: conv.unreadCount > 0 ? 'rgba(0, 255, 204, 0.04)' : undefined
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <img 
+                          src={conv.otherUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80'} 
+                          alt={conv.otherUser.name} 
+                          width={48} 
+                          height={48} 
+                          style={{ borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                        />
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <h4 style={{ margin: 0, fontSize: '1rem' }}>{conv.otherUser.name}</h4>
+                            <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                              {conv.otherUser.role}
+                            </span>
+                            {conv.unreadCount > 0 && (
+                              <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '999px' }}>
+                                {conv.unreadCount} New
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {conv.lastMessage || 'No messages yet'}
+                          </p>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            {new Date(conv.lastMessageAt).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => navigate('/chat', { state: { startChatWith: conv.otherUser } })}
+                        className="glow-btn"
+                        style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                      >
+                        Reply in Chat
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </main>
       </div>

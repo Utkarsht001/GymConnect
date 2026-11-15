@@ -7,28 +7,38 @@ const router = express.Router();
 
 // GET /api/gyms - Discovery listing with optional query filters
 router.get('/', async (req, res) => {
-  const { search, city, facility, minPrice, maxPrice, rating, isApproved } = req.query;
+  const { search, city, facility, minPrice, maxPrice, rating, isApproved, status } = req.query;
 
   // Build prisma query options
   let where = {};
 
-  // Standard users only see approved gyms
-  if (isApproved === 'false' && req.headers['authorization']) {
-    // If request contains authorization, check if it's admin asking for pending listings
+  // Standard users and public visitors only see approved gyms
+  if ((isApproved === 'false' || status === 'PENDING' || status === 'REJECTED' || status === 'ALL') && req.headers['authorization']) {
+    // If request contains authorization, check if it's admin asking for non-approved listings
     try {
       const authHeader = req.headers['authorization'];
       const token = authHeader && authHeader.split(' ')[1];
       const decoded = jwt.verify(token, getJwtSecret());
       if (decoded.role === 'ADMIN') {
-        where.isApproved = false;
+        if (status === 'PENDING') {
+          where.approvalStatus = 'PENDING';
+        } else if (status === 'REJECTED') {
+          where.approvalStatus = 'REJECTED';
+        } else if (isApproved === 'false') {
+          where.isApproved = false;
+        }
+        // If status === 'ALL', no approval filter applied
       } else {
         where.isApproved = true;
+        where.approvalStatus = 'APPROVED';
       }
     } catch (e) {
       where.isApproved = true;
+      where.approvalStatus = 'APPROVED';
     }
   } else {
     where.isApproved = true;
+    where.approvalStatus = 'APPROVED';
   }
 
   if (city) {
@@ -132,15 +142,29 @@ router.get('/', async (req, res) => {
 router.get('/admin/pending', verifyToken, requireRole(['ADMIN']), async (req, res) => {
   try {
     const gyms = await prisma.gym.findMany({
-      where: { isApproved: false },
+      where: {
+        OR: [
+          { approvalStatus: 'PENDING' },
+          { isApproved: false }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
       include: {
         owner: {
-          select: { name: true, email: true }
-        }
+          select: { id: true, name: true, email: true, phone: true, avatar: true, lastLoginAt: true }
+        },
+        facilities: {
+          include: {
+            facility: true
+          }
+        },
+        plans: true,
+        photos: true
       }
     });
     return res.json(gyms);
   } catch (error) {
+    console.error('Fetch pending gyms error:', error);
     return res.status(500).json({ error: 'Failed to fetch pending gyms.' });
   }
 });
@@ -154,7 +178,7 @@ router.get('/:id', async (req, res) => {
       where: { id },
       include: {
         owner: {
-          select: { id: true, name: true, email: true, avatar: true }
+          select: { id: true, name: true, email: true, phone: true, avatar: true }
         },
         facilities: {
           include: {
@@ -181,8 +205,32 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Gym profile not found.' });
     }
 
+    // Protection: If gym is not approved, only the gym's owner or an ADMIN may view it
+    if (!gym.isApproved || gym.approvalStatus !== 'APPROVED') {
+      let authorized = false;
+      if (req.headers['authorization']) {
+        try {
+          const authHeader = req.headers['authorization'];
+          const token = authHeader && authHeader.split(' ')[1];
+          const decoded = jwt.verify(token, getJwtSecret());
+          if (decoded.role === 'ADMIN' || decoded.id === gym.ownerId) {
+            authorized = true;
+          }
+        } catch (e) {
+          authorized = false;
+        }
+      }
+      if (!authorized) {
+        return res.status(403).json({
+          error: 'This gym listing is currently under administrative verification and is not publicly accessible.',
+          approvalStatus: gym.approvalStatus || 'PENDING'
+        });
+      }
+    }
+
     return res.json(gym);
   } catch (error) {
+    console.error('Fetch gym details error:', error);
     return res.status(500).json({ error: 'Failed to fetch gym details.' });
   }
 });
@@ -207,22 +255,35 @@ router.post('/', verifyToken, requireRole(['GYM_OWNER']), async (req, res) => {
     const newGym = await prisma.gym.create({
       data: {
         ownerId: req.user.id,
-        name,
-        description,
-        address,
-        city,
+        name: name.trim(),
+        description: description.trim(),
+        address: address.trim(),
+        city: city.trim(),
         latitude: parseFloat(latitude) || 26.9124,
         longitude: parseFloat(longitude) || 75.7873,
-        contactNumber,
-        email,
+        contactNumber: contactNumber.trim(),
+        email: email.trim(),
         logo: logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300',
         coverImage: coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200',
         openingHours: openingHours || '06:00 AM - 10:00 PM',
         trialMonths: freeTrialDays !== undefined ? Math.max(1, parseInt(freeTrialDays)) : 3,
-        isApproved: true, // Direct approval on registration as requested
+        isApproved: false, // CRITICAL: NEVER auto-approve new gyms
+        approvalStatus: 'PENDING',
+        rejectionReason: null,
+        reviewedAt: null,
       }
     });
 
+    // Notify gym owner that application has been submitted for review
+    await prisma.notification.create({
+      data: {
+        userId: req.user.id,
+        title: 'Gym Registration Submitted',
+        message: `Your gym listing "${newGym.name}" has been submitted and is currently under administrative review.`
+      }
+    });
+
+    console.log(`[GYM CREATION] Gym "${newGym.name}" registered by Owner ${req.user.id} - Status: PENDING`);
     return res.status(201).json(newGym);
   } catch (error) {
     console.error('Create gym error:', error);
@@ -233,78 +294,145 @@ router.post('/', verifyToken, requireRole(['GYM_OWNER']), async (req, res) => {
 // PUT /api/gyms/:id - Update profile
 router.put('/:id', verifyToken, requireOwnerOfGym, async (req, res) => {
   const { id } = req.params;
-  const { name, description, address, city, latitude, longitude, contactNumber, email, logo, coverImage, openingHours, freeTrialDays } = req.body;
+  const { name, description, address, city, latitude, longitude, contactNumber, email, logo, coverImage, openingHours, freeTrialDays, resubmitForApproval } = req.body;
 
   try {
+    const existing = await prisma.gym.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Gym profile not found.' });
+    }
+
+    // If gym was rejected and owner updates it or explicitly requests re-submission, set to PENDING
+    let nextStatus = existing.approvalStatus;
+    let nextIsApproved = existing.isApproved;
+    if (existing.approvalStatus === 'REJECTED' || resubmitForApproval) {
+      nextStatus = 'PENDING';
+      nextIsApproved = false;
+    }
+
     const updatedGym = await prisma.gym.update({
       where: { id },
       data: {
-        name,
-        description,
-        address,
-        city,
+        name: name !== undefined ? name.trim() : undefined,
+        description: description !== undefined ? description.trim() : undefined,
+        address: address !== undefined ? address.trim() : undefined,
+        city: city !== undefined ? city.trim() : undefined,
         latitude: latitude ? parseFloat(latitude) : undefined,
         longitude: longitude ? parseFloat(longitude) : undefined,
-        contactNumber,
-        email,
+        contactNumber: contactNumber !== undefined ? contactNumber.trim() : undefined,
+        email: email !== undefined ? email.trim() : undefined,
         logo,
         coverImage,
         openingHours,
-        trialMonths: freeTrialDays !== undefined ? Math.max(1, parseInt(freeTrialDays)) : undefined
+        trialMonths: freeTrialDays !== undefined ? Math.max(1, parseInt(freeTrialDays)) : undefined,
+        approvalStatus: nextStatus,
+        isApproved: nextIsApproved,
+        ...(nextStatus === 'PENDING' && existing.approvalStatus === 'REJECTED' ? { rejectionReason: null, reviewedAt: null } : {})
       }
     });
 
+    if (nextStatus === 'PENDING' && existing.approvalStatus === 'REJECTED') {
+      await prisma.notification.create({
+        data: {
+          userId: existing.ownerId,
+          title: 'Gym Re-submitted for Review',
+          message: `Your updated profile for "${updatedGym.name}" has been resubmitted for admin approval.`
+        }
+      });
+    }
+
     return res.json(updatedGym);
   } catch (error) {
+    console.error('Update gym error:', error);
     return res.status(500).json({ error: 'Failed to update gym profile.' });
   }
 });
 
-// POST /api/gyms/:id/approve - Approve gym (Admin only)
+// PUT /api/gyms/:id/approve - Approve gym (Admin only)
 router.put('/:id/approve', verifyToken, requireRole(['ADMIN']), async (req, res) => {
   const { id } = req.params;
   try {
+    const existing = await prisma.gym.findUnique({
+      where: { id },
+      include: { owner: true }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Gym not found.' });
+    }
+
     const gym = await prisma.gym.update({
       where: { id },
-      data: { isApproved: true }
+      data: { 
+        isApproved: true,
+        approvalStatus: 'APPROVED',
+        rejectionReason: null,
+        reviewedAt: new Date()
+      }
     });
 
     // Notify the gym owner
     await prisma.notification.create({
       data: {
         userId: gym.ownerId,
-        title: 'Gym Profile Approved!',
-        message: `Your gym listing "${gym.name}" has been approved by the admin and is now public.`
+        title: 'Gym Profile Approved! 🎉',
+        message: `Your gym listing "${gym.name}" has been approved by the admin and is now publicly live on GymConnect.`
       }
     });
 
+    console.log(`[ADMIN APPROVAL] Admin ${req.user.email} APPROVED gym: "${gym.name}" (${gym.id})`);
     return res.json({ message: 'Gym listing approved successfully.', gym });
   } catch (error) {
+    console.error('Approve gym error:', error);
     return res.status(500).json({ error: 'Failed to approve gym.' });
   }
 });
 
-// POST /api/gyms/:id/reject - Suspend/Reject gym (Admin only)
+// PUT /api/gyms/:id/reject - Reject gym with reason (Admin only)
 router.put('/:id/reject', verifyToken, requireRole(['ADMIN']), async (req, res) => {
   const { id } = req.params;
+  const { rejectionReason } = req.body;
+
+  if (!rejectionReason || typeof rejectionReason !== 'string' || rejectionReason.trim().length < 10) {
+    return res.status(400).json({ 
+      error: 'A detailed rejection reason is mandatory (minimum 10 characters) explaining what needs improvement.' 
+    });
+  }
+
   try {
-    const gym = await prisma.gym.update({
+    const existing = await prisma.gym.findUnique({
       where: { id },
-      data: { isApproved: false }
+      include: { owner: true }
     });
 
-    // Notify the owner
-    await prisma.notification.create({
-      data: {
-        userId: gym.ownerId,
-        title: 'Gym Listing Suspended',
-        message: `Your gym listing "${gym.name}" has been deactivated or rejected by the admin. Contact support.`
+    if (!existing) {
+      return res.status(404).json({ error: 'Gym not found.' });
+    }
+
+    const gym = await prisma.gym.update({
+      where: { id },
+      data: { 
+        isApproved: false,
+        approvalStatus: 'REJECTED',
+        rejectionReason: rejectionReason.trim(),
+        reviewedAt: new Date()
       }
     });
 
-    return res.json({ message: 'Gym listing deactivated successfully.', gym });
+    // Notify the owner with reason
+    await prisma.notification.create({
+      data: {
+        userId: gym.ownerId,
+        title: 'Gym Listing Needs Revision',
+        message: `Your gym listing "${gym.name}" was not approved. Reason: ${rejectionReason.trim()}. You can update your listing details on your dashboard and re-submit for review.`
+      }
+    });
+
+    console.log(`[ADMIN REJECTION] Admin ${req.user.email} REJECTED gym: "${gym.name}" (${gym.id}). Reason: ${rejectionReason.trim()}`);
+    return res.json({ message: 'Gym listing rejected with reason recorded.', gym });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to deactivate gym.' });
+    console.error('Reject gym error:', error);
+    return res.status(500).json({ error: 'Failed to reject gym.' });
   }
 });
 

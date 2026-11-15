@@ -122,13 +122,20 @@ export const GymDetails: React.FC = () => {
       navigate('/login');
       return;
     }
-    if (user.role !== 'CUSTOMER') {
-      alert('Only customers can launch conversations with gym owners.');
+    if (user.role !== 'CUSTOMER' && user.role !== 'ADMIN') {
+      alert('Only customers and administrators can launch conversations with gym owners.');
       return;
     }
-    if (gym) {
-      // Navigate to chat, passing state of user to start messaging
-      navigate('/chat', { state: { startChatWith: gym.owner } });
+    if (gym && gym.owner) {
+      const participant = {
+        id: gym.owner.id,
+        name: gym.owner.name,
+        avatar: gym.owner.avatar,
+        role: 'GYM_OWNER',
+        gymName: gym.name,
+        gymId: gym.id
+      };
+      navigate(`/chat?userId=${gym.owner.id}`, { state: { startChatWith: participant } });
     }
   };
 

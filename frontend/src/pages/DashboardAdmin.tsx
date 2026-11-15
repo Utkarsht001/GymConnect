@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SEO } from '../components/SEO';
-import { Shield, Check, X, Users, Dumbbell, Trash2, UserCheck, AlertTriangle, Briefcase, MessageSquare, Settings } from 'lucide-react';
+import { Shield, Check, X, Users, Dumbbell, Trash2, UserCheck, AlertTriangle, Briefcase, MessageSquare, Settings, Eye, Loader2 } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 
 import { ImageInput } from '../components/ImageInput';
@@ -17,16 +17,24 @@ interface GymRecord {
   email: string;
   logo: string;
   coverImage: string;
+  openingHours?: string;
   trialMonths?: number;
   remainingTrialDays?: number;
   isTrialExpired?: boolean;
   trialStatus?: string;
   isApproved: boolean;
+  approvalStatus?: string;
+  rejectionReason?: string;
+  reviewedAt?: string;
   priorityOrder?: number;
   isFeatured?: boolean;
   isPromoted?: boolean;
   ownerId?: string;
   owner?: { id: string; name: string; email: string; phone?: string; avatar?: string; lastLoginAt?: string };
+  facilities?: Array<{ facility: { id: string; name: string } }>;
+  plans?: Array<{ id: string; name: string; price: number; durationDays: number; description?: string }>;
+  photos?: Array<{ id: string; url: string; category: string }>;
+  createdAt?: string;
 }
 
 interface UserRecord {
@@ -74,6 +82,13 @@ export const DashboardAdmin: React.FC = () => {
   // Active Tab
   const [adminTab, setAdminTab] = useState<'gyms' | 'users' | 'employees' | 'complaints' | 'settings' | 'subpayments' | 'promotions'>('gyms');
 
+  // Gym Approval Management States
+  const [gymStatusFilter, setGymStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [rejectingGym, setRejectingGym] = useState<GymRecord | null>(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [isSubmittingReject, setIsSubmittingReject] = useState(false);
+  const [viewingGym, setViewingGym] = useState<GymRecord | null>(null);
+
   // Data states
   const [gyms, setGyms] = useState<GymRecord[]>([]);
   const [usersList, setUsersList] = useState<UserRecord[]>([]);
@@ -95,8 +110,8 @@ export const DashboardAdmin: React.FC = () => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch all gyms (approved & pending)
-      const gymsData = await apiFetch('/api/gyms?isApproved=false');
+      // 1. Fetch all gyms (Admin status=ALL gets all approved, pending, and rejected gyms)
+      const gymsData = await apiFetch('/api/gyms?status=ALL');
       setGyms(gymsData || []);
 
       // 2. Fetch all users
@@ -145,14 +160,50 @@ export const DashboardAdmin: React.FC = () => {
     fetchAdminData();
   }, [user]);
 
-  // Actions: Gyms
-  const handleApproveGym = async (gymId: string) => {
+  // Actions: Gyms Approval Workflow
+  const handleApproveGym = async (gymId: string, gymName: string) => {
+    const confirmApprove = window.confirm(`Approve gym "${gymName}"? It will become publicly visible across the platform and open for member subscriptions.`);
+    if (!confirmApprove) return;
+
     try {
       await apiFetch(`/api/gyms/${gymId}/approve`, { method: 'PUT' });
-      alert('Gym listing approved!');
+      alert(`Gym "${gymName}" approved successfully!`);
+      if (viewingGym?.id === gymId) setViewingGym(null);
       fetchAdminData();
     } catch (err: any) {
       alert(err.message || 'Approval failed.');
+    }
+  };
+
+  const handleOpenRejectModal = (gym: GymRecord) => {
+    setRejectingGym(gym);
+    setRejectionReasonInput('');
+  };
+
+  const handleConfirmRejectGym = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingGym) return;
+    const reason = rejectionReasonInput.trim();
+    if (!reason || reason.length < 10) {
+      alert('A detailed rejection reason (minimum 10 characters) is mandatory so the gym owner understands what to improve.');
+      return;
+    }
+
+    setIsSubmittingReject(true);
+    try {
+      await apiFetch(`/api/gyms/${rejectingGym.id}/reject`, {
+        method: 'PUT',
+        body: JSON.stringify({ rejectionReason: reason })
+      });
+      alert(`Gym "${rejectingGym.name}" has been marked as REJECTED. Notification sent to owner.`);
+      setRejectingGym(null);
+      setRejectionReasonInput('');
+      if (viewingGym?.id === rejectingGym.id) setViewingGym(null);
+      fetchAdminData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to reject gym.');
+    } finally {
+      setIsSubmittingReject(false);
     }
   };
 
@@ -163,6 +214,7 @@ export const DashboardAdmin: React.FC = () => {
     try {
       await apiFetch(`/api/gyms/admin/${gymId}`, { method: 'DELETE' });
       alert(`Gym "${gymName}" deleted successfully.`);
+      if (viewingGym?.id === gymId) setViewingGym(null);
       fetchAdminData();
     } catch (err: any) {
       alert(err.message || 'Failed to remove gym.');
@@ -340,7 +392,16 @@ export const DashboardAdmin: React.FC = () => {
   }
 
   const pendingEmployees = usersList.filter(u => u.role === 'EMPLOYEE' && !u.isApproved);
-  const pendingGyms = gyms.filter(g => !g.isApproved);
+  const pendingGyms = gyms.filter(g => g.approvalStatus === 'PENDING' || (!g.isApproved && g.approvalStatus !== 'REJECTED'));
+  const approvedGyms = gyms.filter(g => g.approvalStatus === 'APPROVED' && g.isApproved);
+  const rejectedGyms = gyms.filter(g => g.approvalStatus === 'REJECTED');
+
+  const filteredGymsList = gyms.filter(g => {
+    if (gymStatusFilter === 'PENDING') return g.approvalStatus === 'PENDING' || (!g.isApproved && g.approvalStatus !== 'REJECTED');
+    if (gymStatusFilter === 'APPROVED') return g.approvalStatus === 'APPROVED' && g.isApproved;
+    if (gymStatusFilter === 'REJECTED') return g.approvalStatus === 'REJECTED';
+    return true; // 'ALL'
+  });
 
   return (
     <div className="admin-dashboard-container container">
@@ -448,110 +509,234 @@ export const DashboardAdmin: React.FC = () => {
       {/* TAB CONTENT: GYMS MANAGEMENT */}
       {adminTab === 'gyms' && (
         <section className="dashboard-block-panel glass-panel" style={{ marginTop: '1.5rem' }}>
-          <h2><Dumbbell size={18} /> Listed Fitness Centers ({gyms.length})</h2>
-          <p className="text-secondary" style={{ marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-            Review, approve new listings, or remove fake/violating gyms directly from the network.
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h2 style={{ margin: 0 }}><Dumbbell size={18} /> Gym Approval & Verification Management ({gyms.length})</h2>
+              <p className="text-secondary" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
+                Inspect newly submitted gym listings, verify authenticity, approve for public listing, or reject with a required reason.
+              </p>
+            </div>
+
+            {/* Status Filter Pills */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button 
+                type="button"
+                onClick={() => setGymStatusFilter('ALL')}
+                className={`btn-secondary ${gymStatusFilter === 'ALL' ? 'active-tab-glow' : ''}`}
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+              >
+                All Gyms ({gyms.length})
+              </button>
+              <button 
+                type="button"
+                onClick={() => setGymStatusFilter('PENDING')}
+                className={`btn-secondary ${gymStatusFilter === 'PENDING' ? 'active-tab-glow' : ''}`}
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderColor: pendingGyms.length > 0 ? '#ffb703' : undefined, color: pendingGyms.length > 0 ? '#ffb703' : undefined }}
+              >
+                ⏳ Pending Review ({pendingGyms.length})
+              </button>
+              <button 
+                type="button"
+                onClick={() => setGymStatusFilter('APPROVED')}
+                className={`btn-secondary ${gymStatusFilter === 'APPROVED' ? 'active-tab-glow' : ''}`}
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+              >
+                ✓ Approved ({approvedGyms.length})
+              </button>
+              <button 
+                type="button"
+                onClick={() => setGymStatusFilter('REJECTED')}
+                className={`btn-secondary ${gymStatusFilter === 'REJECTED' ? 'active-tab-glow' : ''}`}
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', color: rejectedGyms.length > 0 ? '#ef4444' : undefined }}
+              >
+                ✕ Rejected ({rejectedGyms.length})
+              </button>
+            </div>
+          </div>
 
           <div className="gyms-admin-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {gyms.map(gym => (
-              <div key={gym.id} className="pending-gym-row-card glass-card" style={{ display: 'flex', gap: '1.25rem', padding: '1.25rem', alignItems: 'flex-start' }}>
-                <img src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} alt={`${gym.name} brand logo`} loading="lazy" decoding="async" width={70} height={70} style={{ width: '70px', height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
-                
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0 }}>{gym.name}</h3>
-                    <span className={`badge badge-${gym.isApproved ? 'approved' : 'pending'}`}>
-                      {gym.isApproved ? 'Approved' : 'Pending Approval'}
-                    </span>
-                    <code style={{ background: '#0b0d10', color: '#00ffcc', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', border: '1px solid rgba(0,255,204,0.3)' }}>
-                      Gym ID: {gym.id}
-                    </code>
-                  </div>
-                  
-                  <p className="pending-address" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.3rem 0' }}>
-                    📍 <b>Address:</b> {gym.address}, {gym.city}
-                  </p>
-                  <p className="pending-owner-details" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0' }}>
-                    📞 <b>Phone:</b> {gym.contactNumber} | ✉️ <b>Email:</b> {gym.email}
-                  </p>
-                  {gym.owner && (
-                    <p style={{ fontSize: '0.8rem', color: 'var(--primary-color)', margin: '0.3rem 0 0 0' }}>
-                      👤 <b>Gym Owner:</b> {gym.owner.name} ({gym.owner.email}) 
-                      {gym.owner.lastLoginAt ? (
-                        <span style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
-                          🔑 <b>Last Login:</b> {new Date(gym.owner.lastLoginAt).toLocaleString()}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>🔑 <b>Last Login:</b> Never</span>
-                      )}
-                    </p>
-                  )}
-
-                  {/* Platform Free Trial Tracking Status */}
-                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span 
-                      className="badge" 
-                      style={{ 
-                        background: gym.isTrialExpired ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 255, 204, 0.15)', 
-                        color: gym.isTrialExpired ? '#ef4444' : '#00ffcc', 
-                        border: `1px solid ${gym.isTrialExpired ? 'rgba(239, 68, 68, 0.3)' : 'rgba(0, 255, 204, 0.3)'}`,
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      {gym.trialStatus === 'SUBSCRIBED' 
-                        ? '🟢 Site Subscription Paid' 
-                        : gym.isTrialExpired 
-                          ? '🔴 Platform Trial Expired (Subscription Needed)' 
-                          : `🎁 Free Platform Trial: ${gym.trialMonths || 3} Months (${gym.remainingTrialDays ?? 90} Days Remaining)`}
-                    </span>
-
-                    <button 
-                      onClick={() => handleUpdateTrialMonths(gym.id, gym.trialMonths || 3)}
-                      className="btn-secondary"
-                      style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                    >
-                      ⚙️ Change Trial ({gym.trialMonths || 3} Months)
-                    </button>
-
-                    <button 
-                      onClick={() => handleUpdateGymPriority(gym.id, gym.priorityOrder || 0)}
-                      className="btn-secondary"
-                      style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderColor: gym.isFeatured || gym.isPromoted ? '#00ffcc' : undefined, color: gym.isFeatured || gym.isPromoted ? '#00ffcc' : undefined }}
-                    >
-                      ⚡ Rank Priority ({gym.priorityOrder || 0}) {gym.isFeatured ? '⭐ Featured' : ''} {gym.isPromoted ? '🔥 Promoted' : ''}
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                  {gym.owner && (
-                    <button 
-                      onClick={() => navigate('/chat', { state: { startChatWith: { id: gym.owner!.id, name: gym.owner!.name, avatar: gym.owner!.avatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=owner', role: 'GYM_OWNER' } } })} 
-                      className="glow-btn flex-center" 
-                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', gap: '0.3rem' }}
-                    >
-                      <MessageSquare size={14} /> Connect with Owner
-                    </button>
-                  )}
-
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {!gym.isApproved && (
-                      <button onClick={() => handleApproveGym(gym.id)} className="glow-btn" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
-                        <Check size={14} /> Approve
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => handleRemoveGym(gym.id, gym.name)} 
-                      className="btn-secondary" 
-                      style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
-                    >
-                      <Trash2 size={14} /> Remove Gym
-                    </button>
-                  </div>
-                </div>
+            {filteredGymsList.length === 0 ? (
+              <div className="glass-card text-center" style={{ padding: '3rem 1.5rem', borderRadius: '10px' }}>
+                <Dumbbell size={40} className="text-muted" style={{ margin: '0 auto 0.75rem' }} />
+                <h3>No gyms match the selected filter</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  {gymStatusFilter === 'PENDING' ? 'Great job! There are currently no gym registrations awaiting review.' : 'Try selecting another status tab above.'}
+                </p>
               </div>
-            ))}
+            ) : (
+              filteredGymsList.map(gym => {
+                const isApprovedStatus = gym.approvalStatus === 'APPROVED' && gym.isApproved;
+                const isRejectedStatus = gym.approvalStatus === 'REJECTED';
+
+                return (
+                  <div 
+                    key={gym.id} 
+                    className="pending-gym-row-card glass-card" 
+                    style={{ 
+                      display: 'flex', 
+                      gap: '1.25rem', 
+                      padding: '1.25rem', 
+                      alignItems: 'flex-start',
+                      borderLeft: `4px solid ${isApprovedStatus ? '#00ffcc' : isRejectedStatus ? '#ef4444' : '#ffb703'}`
+                    }}
+                  >
+                    <img 
+                      src={gym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} 
+                      alt={`${gym.name} brand logo`} 
+                      loading="lazy" 
+                      decoding="async" 
+                      width={75} 
+                      height={75} 
+                      style={{ width: '75px', height: '75px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border-color)', flexShrink: 0 }} 
+                    />
+                    
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.15rem' }}>{gym.name}</h3>
+                        
+                        {/* Approval Status Badge */}
+                        <span 
+                          className="badge"
+                          style={{
+                            background: isApprovedStatus ? 'rgba(0, 255, 204, 0.15)' : isRejectedStatus ? 'rgba(239, 68, 68, 0.18)' : 'rgba(255, 183, 3, 0.18)',
+                            color: isApprovedStatus ? '#00ffcc' : isRejectedStatus ? '#ef4444' : '#ffb703',
+                            border: `1px solid ${isApprovedStatus ? 'rgba(0, 255, 204, 0.35)' : isRejectedStatus ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 183, 3, 0.4)'}`,
+                            fontWeight: 700,
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          {isApprovedStatus ? '✓ APPROVED' : isRejectedStatus ? '✕ REJECTED' : '⏳ PENDING APPROVAL'}
+                        </span>
+
+                        <code style={{ background: '#0b0d10', color: '#00ffcc', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', border: '1px solid rgba(0,255,204,0.3)' }}>
+                          ID: {gym.id.substring(0, 13)}...
+                        </code>
+                      </div>
+
+                      {/* Display Rejection Reason if Rejected */}
+                      {isRejectedStatus && gym.rejectionReason && (
+                        <div style={{ marginTop: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(239, 68, 68, 0.08)', borderLeft: '3px solid #ef4444', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 700, textTransform: 'uppercase' }}>Rejection Reason:</span>
+                          <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.82rem', color: '#f87171' }}>"{gym.rejectionReason}"</p>
+                        </div>
+                      )}
+                      
+                      <p className="pending-address" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.35rem 0' }}>
+                        📍 <b>Location:</b> {gym.address}, {gym.city} {gym.openingHours ? `| 🕒 ${gym.openingHours}` : ''}
+                      </p>
+                      
+                      <p className="pending-owner-details" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0' }}>
+                        📞 <b>Contact:</b> {gym.contactNumber} | ✉️ <b>Email:</b> {gym.email}
+                      </p>
+
+                      {gym.owner && (
+                        <p style={{ fontSize: '0.8rem', color: 'var(--primary-color)', margin: '0.3rem 0 0 0' }}>
+                          👤 <b>Owner:</b> {gym.owner.name} ({gym.owner.email}) 
+                          {gym.owner.lastLoginAt ? (
+                            <span style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
+                              🔑 <b>Last Login:</b> {new Date(gym.owner.lastLoginAt).toLocaleString()}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>🔑 <b>Last Login:</b> Never</span>
+                          )}
+                        </p>
+                      )}
+
+                      {/* Platform Free Trial Tracking Status */}
+                      <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <span 
+                          className="badge" 
+                          style={{ 
+                            background: gym.isTrialExpired ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 255, 204, 0.15)', 
+                            color: gym.isTrialExpired ? '#ef4444' : '#00ffcc', 
+                            border: `1px solid ${gym.isTrialExpired ? 'rgba(239, 68, 68, 0.3)' : 'rgba(0, 255, 204, 0.3)'}`,
+                            fontSize: '0.72rem'
+                          }}
+                        >
+                          {gym.trialStatus === 'SUBSCRIBED' 
+                            ? '🟢 Platform Subscription Active' 
+                            : gym.isTrialExpired 
+                              ? '🔴 Platform Trial Expired' 
+                              : `🎁 Free Trial: ${gym.trialMonths || 3} Mos (${gym.remainingTrialDays ?? 90} Days)`}
+                        </span>
+
+                        <button 
+                          onClick={() => handleUpdateTrialMonths(gym.id, gym.trialMonths || 3)}
+                          className="btn-secondary"
+                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+                        >
+                          ⚙️ Set Trial ({gym.trialMonths || 3} Mos)
+                        </button>
+
+                        <button 
+                          onClick={() => handleUpdateGymPriority(gym.id, gym.priorityOrder || 0)}
+                          className="btn-secondary"
+                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderColor: gym.isFeatured || gym.isPromoted ? '#00ffcc' : undefined, color: gym.isFeatured || gym.isPromoted ? '#00ffcc' : undefined }}
+                        >
+                          ⚡ Priority ({gym.priorityOrder || 0}) {gym.isFeatured ? '⭐' : ''} {gym.isPromoted ? '🔥' : ''}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Actions Column */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end', minWidth: '160px' }}>
+                      {/* View Details Action */}
+                      <button 
+                        onClick={() => setViewingGym(gym)}
+                        className="btn-secondary flex-center"
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', gap: '0.35rem', width: '100%', justifyContent: 'center' }}
+                      >
+                        <Eye size={14} /> View Details
+                      </button>
+
+                      {gym.owner && (
+                        <button 
+                          onClick={() => navigate('/chat', { state: { startChatWith: { id: gym.owner!.id, name: gym.owner!.name, avatar: gym.owner!.avatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=owner', role: 'GYM_OWNER', gymName: gym.name, gymId: gym.id } } })} 
+                          className="glow-btn flex-center" 
+                          style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', gap: '0.35rem', width: '100%', justifyContent: 'center' }}
+                        >
+                          <MessageSquare size={14} /> Chat with Owner
+                        </button>
+                      )}
+
+                      {/* Approval & Rejection Workflow Buttons */}
+                      <div style={{ display: 'flex', gap: '0.4rem', width: '100%' }}>
+                        {!isApprovedStatus && (
+                          <button 
+                            onClick={() => handleApproveGym(gym.id, gym.name)} 
+                            className="glow-btn flex-center" 
+                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.65rem', flex: 1, justifyContent: 'center', gap: '0.25rem' }}
+                            title="Approve gym and make live"
+                          >
+                            <Check size={14} /> Approve
+                          </button>
+                        )}
+
+                        {!isRejectedStatus && (
+                          <button 
+                            onClick={() => handleOpenRejectModal(gym)} 
+                            className="btn-secondary flex-center" 
+                            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)', fontSize: '0.8rem', padding: '0.4rem 0.65rem', flex: 1, justifyContent: 'center', gap: '0.25rem' }}
+                            title="Reject gym listing with feedback reason"
+                          >
+                            <X size={14} /> Reject
+                          </button>
+                        )}
+                      </div>
+
+                      <button 
+                        onClick={() => handleRemoveGym(gym.id, gym.name)} 
+                        className="btn-secondary flex-center" 
+                        style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.25)', fontSize: '0.72rem', padding: '0.3rem 0.6rem', marginTop: '0.2rem' }}
+                        title="Permanently remove gym listing"
+                      >
+                        <Trash2 size={12} /> Delete Gym
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
       )}
@@ -985,6 +1170,226 @@ export const DashboardAdmin: React.FC = () => {
             </button>
           </form>
         </section>
+      )}
+
+      {/* REJECTION REASON MODAL */}
+      {rejectingGym && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-card" style={{ maxWidth: '520px', width: '100%', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.5)', background: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <X size={20} /> Reject Gym Registration
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => setRejectingGym(null)} 
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }}
+                aria-label="Close rejection dialog"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Provide clear feedback for <b>"{rejectingGym.name}"</b> (Owner: {rejectingGym.owner?.email || rejectingGym.email}). The gym owner will see this reason on their dashboard and can make corrections to resubmit.
+            </p>
+
+            <form onSubmit={handleConfirmRejectGym}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.4rem', color: '#f87171' }}>
+                  Mandatory Rejection Reason (minimum 10 characters):
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={rejectionReasonInput}
+                  onChange={(e) => setRejectionReasonInput(e.target.value)}
+                  placeholder="e.g. Incomplete address verification, equipment photos are blurry, or missing certified contact info..."
+                  className="form-control"
+                  style={{ width: '100%', background: '#0b0d14', color: '#fff', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.85rem' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.72rem', color: rejectionReasonInput.trim().length >= 10 ? '#00ffcc' : '#ef4444' }}>
+                  <span>{rejectionReasonInput.trim().length >= 10 ? '✓ Valid reason length' : 'Minimum 10 characters required'}</span>
+                  <span>{rejectionReasonInput.trim().length} chars</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setRejectingGym(null)} 
+                  className="btn-secondary"
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmittingReject || rejectionReasonInput.trim().length < 10}
+                  className="glow-btn"
+                  style={{ background: '#ef4444', borderColor: '#ef4444', color: '#fff', padding: '0.5rem 1.25rem' }}
+                >
+                  {isSubmittingReject ? <Loader2 size={16} className="animate-spin" /> : 'Confirm & Send Rejection'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW DETAILS INSPECTION MODAL */}
+      {viewingGym && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
+          <div className="glass-card" style={{ maxWidth: '780px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', borderRadius: '16px', border: '1px solid var(--primary-color)', background: '#0f172a' }}>
+            
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <img 
+                  src={viewingGym.logo || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200'} 
+                  alt={viewingGym.name} 
+                  width={64} 
+                  height={64} 
+                  style={{ borderRadius: '10px', objectFit: 'cover', border: '2px solid #00ffcc' }} 
+                />
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.4rem' }}>{viewingGym.name}</h2>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center' }}>
+                    <span 
+                      className="badge" 
+                      style={{ 
+                        background: viewingGym.approvalStatus === 'APPROVED' ? 'rgba(0,255,204,0.15)' : viewingGym.approvalStatus === 'REJECTED' ? 'rgba(239,68,68,0.2)' : 'rgba(255,183,3,0.2)',
+                        color: viewingGym.approvalStatus === 'APPROVED' ? '#00ffcc' : viewingGym.approvalStatus === 'REJECTED' ? '#ef4444' : '#ffb703',
+                        border: `1px solid ${viewingGym.approvalStatus === 'APPROVED' ? 'rgba(0,255,204,0.3)' : viewingGym.approvalStatus === 'REJECTED' ? 'rgba(239,68,68,0.4)' : 'rgba(255,183,3,0.4)'}`
+                      }}
+                    >
+                      {viewingGym.approvalStatus === 'APPROVED' ? '✓ APPROVED' : viewingGym.approvalStatus === 'REJECTED' ? '✕ REJECTED' : '⏳ PENDING REVIEW'}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      📍 {viewingGym.city}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setViewingGym(null)} 
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.3rem' }}
+                aria-label="Close details"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Cover Image */}
+            {viewingGym.coverImage && (
+              <div style={{ marginBottom: '1.25rem', borderRadius: '10px', overflow: 'hidden', height: '180px' }}>
+                <img 
+                  src={viewingGym.coverImage} 
+                  alt={`${viewingGym.name} Cover`} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+            )}
+
+            {/* Description & Location */}
+            <div style={{ marginBottom: '1.25rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#00ffcc', fontSize: '0.9rem' }}>About Gym</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{viewingGym.description}</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                <div>📍 <b>Address:</b> {viewingGym.address}, {viewingGym.city}</div>
+                <div>🕒 <b>Hours:</b> {viewingGym.openingHours || '06:00 AM - 10:00 PM'}</div>
+                <div>📞 <b>Contact:</b> {viewingGym.contactNumber}</div>
+                <div>✉️ <b>Email:</b> {viewingGym.email}</div>
+              </div>
+            </div>
+
+            {/* Owner Details */}
+            {viewingGym.owner && (
+              <div style={{ marginBottom: '1.25rem', background: 'rgba(0,255,204,0.04)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(0,255,204,0.2)' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#00ffcc', fontSize: '0.9rem' }}>Registered Gym Owner</h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <img 
+                    src={viewingGym.owner.avatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=owner'} 
+                    alt={viewingGym.owner.name} 
+                    width={40} 
+                    height={40} 
+                    style={{ borderRadius: '50%', objectFit: 'cover' }} 
+                  />
+                  <div style={{ fontSize: '0.85rem' }}>
+                    <b>{viewingGym.owner.name}</b> ({viewingGym.owner.email})
+                    {viewingGym.owner.phone && <span style={{ marginLeft: '0.5rem', color: 'var(--text-secondary)' }}>📞 {viewingGym.owner.phone}</span>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Facilities Tags */}
+            {viewingGym.facilities && viewingGym.facilities.length > 0 && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#00ffcc', fontSize: '0.9rem' }}>Amenities & Facilities</h4>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {viewingGym.facilities.map((gf, idx) => (
+                    <span key={idx} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.2rem 0.6rem', fontSize: '0.78rem' }}>
+                      ✓ {gf.facility?.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Membership Plans */}
+            {viewingGym.plans && viewingGym.plans.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#00ffcc', fontSize: '0.9rem' }}>Membership Plans ({viewingGym.plans.length})</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                  {viewingGym.plans.map(p => (
+                    <div key={p.id} style={{ background: '#0b0d14', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <b style={{ display: 'block', fontSize: '0.9rem' }}>{p.name}</b>
+                      <span style={{ color: '#00ffcc', fontWeight: 700, fontSize: '0.95rem' }}>₹{p.price}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', display: 'block' }}>Duration: {p.durationDays} days</span>
+                      {p.description && <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.3rem 0 0 0' }}>{p.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Bottom Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {viewingGym.approvalStatus !== 'APPROVED' && (
+                  <button 
+                    onClick={() => handleApproveGym(viewingGym.id, viewingGym.name)} 
+                    className="glow-btn flex-center"
+                    style={{ gap: '0.35rem', padding: '0.5rem 1rem' }}
+                  >
+                    <Check size={16} /> Approve & Publish
+                  </button>
+                )}
+                {viewingGym.approvalStatus !== 'REJECTED' && (
+                  <button 
+                    onClick={() => handleOpenRejectModal(viewingGym)} 
+                    className="btn-secondary flex-center"
+                    style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)', gap: '0.35rem', padding: '0.5rem 1rem' }}
+                  >
+                    <X size={16} /> Reject Listing
+                  </button>
+                )}
+              </div>
+
+              <button 
+                type="button" 
+                onClick={() => setViewingGym(null)} 
+                className="btn-secondary"
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Close Inspection
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`

@@ -8,10 +8,11 @@
     "vercel-build": "prisma generate",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test tests/auth.test.js",
+    "test": "node --test tests/auth.test.js tests/ai.test.js tests/chat_approval.test.js",
     "import-gyms": "node import_jaipur_gyms.js"
   },
   "dependencies": {
+    "@google/genai": "^3.3.0",
     "@prisma/client": "^5.10.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

@@ -22,8 +22,8 @@ router.post('/', verifyToken, requireRole(['CUSTOMER']), async (req, res) => {
       return res.status(404).json({ error: 'Membership plan not found.' });
     }
 
-    if (!plan.gym.isApproved) {
-      return res.status(403).json({ error: 'Cannot purchase memberships for unapproved gyms.' });
+    if (!plan.gym.isApproved || plan.gym.approvalStatus !== 'APPROVED') {
+      return res.status(403).json({ error: 'Cannot purchase memberships for unapproved or pending gyms.' });
     }
 
     // Calculate dates
