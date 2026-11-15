@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|favicon\\.svg|icons\\.svg|robots\\.txt|sitemap\\.xml|llms\\.txt|\\.well-known/).*)",
       "destination": "/index.html"
     }
   ],
@@ -16,8 +16,42 @@
       ]
     },
     {
+      "source": "/llms.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/.well-known/(.*)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
+        {
+          "key": "Link",
+          "value": "<https://gym-connect-six.vercel.app/.well-known/ard.json>; rel=\"ard\""
+        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"

@@ -4,6 +4,8 @@ Allow: /gyms
 Allow: /gyms/*
 Allow: /store
 Allow: /login
+Allow: /llms.txt
+Allow: /.well-known/
 
 # Private and authenticated routes
 Disallow: /dashboard/
@@ -15,3 +17,4 @@ Disallow: /reset-password
 Disallow: /api/
 
 Sitemap: https://gym-connect-six.vercel.app/sitemap.xml
+Agentmap: https://gym-connect-six.vercel.app/.well-known/ard.json

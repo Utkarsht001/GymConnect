@@ -1,0 +1,46 @@
+{
+  "$schema": "https://agenticresourcediscovery.org/schema/v1/catalog.json",
+  "specVersion": "0.91",
+  "host": {
+    "displayName": "GymConnect",
+    "identifier": "https://gym-connect-six.vercel.app",
+    "documentationUrl": "https://gym-connect-six.vercel.app/llms.txt"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:gym-connect-six.vercel.app:service:gym-discovery",
+      "displayName": "GymConnect Gym Discovery & Facilities Directory",
+      "type": "text/html",
+      "url": "https://gym-connect-six.vercel.app/gyms",
+      "description": "Interactive directory to search, locate, and compare local gyms, fitness centers, membership tiers, and athletic facilities across cities with map coordinates.",
+      "representativeQueries": [
+        "find gyms near me",
+        "search gyms in my city",
+        "compare gym amenities and membership pricing"
+      ]
+    },
+    {
+      "identifier": "urn:air:gym-connect-six.vercel.app:service:fitness-store",
+      "displayName": "GymConnect Fitness Store & Retail",
+      "type": "text/html",
+      "url": "https://gym-connect-six.vercel.app/store",
+      "description": "E-commerce marketplace offering gym equipment, workout supplements, athletic apparel, and accessories with shopping cart management.",
+      "representativeQueries": [
+        "buy gym equipment and workout accessories",
+        "order health and fitness supplements online",
+        "purchase workout apparel and fitness gear"
+      ]
+    },
+    {
+      "identifier": "urn:air:gym-connect-six.vercel.app:doc:llms-reference",
+      "displayName": "GymConnect LLM Reference & Site Overview",
+      "type": "text/markdown",
+      "url": "https://gym-connect-six.vercel.app/llms.txt",
+      "description": "Machine-readable Markdown documentation outlining GymConnect architecture, features, and public endpoints for AI browsing agents.",
+      "representativeQueries": [
+        "what features does GymConnect provide",
+        "GymConnect public URLs and service documentation"
+      ]
+    }
+  ]
+}

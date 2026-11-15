@@ -1,0 +1,27 @@
+# GymConnect
+
+> GymConnect is a comprehensive web platform for discovering local fitness centers, exploring gym amenities, purchasing flexible membership passes, and ordering fitness gear and workout supplements.
+
+GymConnect connects fitness seekers directly with verified gym facilities and equipment providers. The platform offers multi-role portals for gym members, club owners, gym employees, and platform administrators, enabling streamlined gym management, real-time customer messaging, and automated order processing.
+
+## Public Navigation & Key Pages
+
+- [GymConnect Home](https://gym-connect-six.vercel.app/): Main landing page highlighting featured fitness centers, core platform benefits, customer testimonials, and direct access to gym discovery.
+- [Find Gyms Directory](https://gym-connect-six.vercel.app/gyms): Interactive search and filter tool for locating gyms by city, name, amenities (e.g., Cardio, Free Weights, CrossFit, Steam Bath, Sauna, Personal Training), price range, customer ratings, and geographic distance with map coordinates.
+- [Fitness Store](https://gym-connect-six.vercel.app/store): Sports and fitness marketplace offering workout equipment, health supplements, activewear, and gym accessories.
+- [Authentication Portal](https://gym-connect-six.vercel.app/login): Unified sign-in and registration screen for Customers, Gym Owners, Employees, and Administrators with role-based access control.
+
+## Platform Capabilities
+
+- **Gym Discovery**: Search and compare fitness centers across various cities using location filters, price sliders, and amenity tags.
+- **Gym Details and Facilities**: Detailed club profiles featuring equipment listings, verified photo galleries, operating hours, owner contact information, and customer reviews.
+- **Membership Plans**: Transparent, tiered membership options including Monthly, Quarterly, and Annual passes with direct booking and guest pass options.
+- **Fitness Product Store**: Online catalog of gym gear, protein supplements, and training accessories with instant product search and category filtering.
+- **Shopping and Order Functionality**: Shopping cart management, secure checkout with delivery address and contact information, and real-time order tracking.
+- **User Accounts and Dashboards**: Dedicated role-based portals for customers to manage active gym memberships, gym owners to manage facilities and products, employees to verify attendance, and administrators to review listings.
+
+## Technical Specifications & Agent Resources
+
+- [Agentic Resource Discovery Manifest (ARD v0.91)](https://gym-connect-six.vercel.app/.well-known/ard.json): Machine-readable catalog detailing public capabilities according to the ARD specification.
+- [XML Sitemap](https://gym-connect-six.vercel.app/sitemap.xml): Index of public canonical routes for search engines and web indexing crawlers.
+- [Robots Directives](https://gym-connect-six.vercel.app/robots.txt): Crawler rules and Agentmap location declaration.
