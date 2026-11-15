@@ -17,4 +17,3 @@ Disallow: /reset-password
 Disallow: /api/
 
 Sitemap: https://gym-connect-six.vercel.app/sitemap.xml
-Agentmap: https://gym-connect-six.vercel.app/.well-known/ard.json
