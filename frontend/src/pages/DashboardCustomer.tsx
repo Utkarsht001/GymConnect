@@ -216,7 +216,7 @@ export const DashboardCustomer: React.FC = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0 }}>
                       <button 
-                        onClick={() => navigate(`/chat`, { state: { startChatWith: { id: sub.gym.ownerId || sub.gym.id, name: sub.gym.name, avatar: sub.gym.logo, role: 'GYM_OWNER', gymName: sub.gym.name, gymId: sub.gym.id } } })}
+                        onClick={() => navigate(`/chat?userId=${sub.gym.ownerId || sub.gym.id}`, { state: { startChatWith: { id: sub.gym.ownerId || sub.gym.id, name: sub.gym.name, avatar: sub.gym.logo, role: 'GYM_OWNER', gymName: sub.gym.name, gymId: sub.gym.id } } })}
                         className="glow-btn flex-center"
                         style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', gap: '0.25rem' }}
                         aria-label={`Chat with ${sub.gym.name} owner`}
@@ -312,7 +312,7 @@ export const DashboardCustomer: React.FC = () => {
                 {conversations.slice(0, 4).map(c => (
                   <div 
                     key={c.otherUser.id}
-                    onClick={() => navigate('/chat', { state: { startChatWith: c.otherUser } })}
+                    onClick={() => navigate(`/chat?userId=${c.otherUser.id}`, { state: { startChatWith: c.otherUser } })}
                     className="fav-sidebar-card glass-card"
                     style={{ cursor: 'pointer', padding: '0.6rem 0.75rem' }}
                   >

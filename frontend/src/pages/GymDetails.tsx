@@ -37,7 +37,8 @@ interface GymDetailsData {
 }
 
 export const GymDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, gymId } = useParams<{ id?: string; gymId?: string }>();
+  const currentGymId = id || gymId;
   const { user, apiFetch } = useAuth();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export const GymDetails: React.FC = () => {
   // States
   const [gym, setGym] = useState<GymDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activePhotoCategory, setActivePhotoCategory] = useState<string>('ALL');
   const [isFavorite, setIsFavorite] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -56,17 +58,26 @@ export const GymDetails: React.FC = () => {
   const mapInstance = useRef<L.Map | null>(null);
 
   const fetchGymDetails = async () => {
+    if (!currentGymId) {
+      setErrorMessage('No gym identifier provided.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage(null);
     try {
-      const data = await apiFetch(`/api/gyms/${id}`);
+      const data = await apiFetch(`/api/gyms/${currentGymId}`);
       setGym(data);
       
       // Check if favorited
       if (user && user.role === 'CUSTOMER') {
         const favs = JSON.parse(localStorage.getItem('fithub_favorites') || '[]');
-        setIsFavorite(favs.includes(id));
+        setIsFavorite(favs.includes(currentGymId));
       }
-    } catch (err) {
-      console.error('Failed to load gym details');
+    } catch (err: any) {
+      console.error('Failed to load gym details:', err);
+      setErrorMessage(err.message || 'Gym profile could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -74,7 +85,7 @@ export const GymDetails: React.FC = () => {
 
   useEffect(() => {
     fetchGymDetails();
-  }, [id, user]);
+  }, [currentGymId, user]);
 
   // Map drawing
   useEffect(() => {
@@ -108,10 +119,10 @@ export const GymDetails: React.FC = () => {
     const favs = JSON.parse(localStorage.getItem('fithub_favorites') || '[]');
     let updatedFavs = [];
     if (isFavorite) {
-      updatedFavs = favs.filter((fId: string) => fId !== id);
+      updatedFavs = favs.filter((fId: string) => fId !== currentGymId);
       setIsFavorite(false);
     } else {
-      updatedFavs = [...favs, id];
+      updatedFavs = [...favs, currentGymId];
       setIsFavorite(true);
     }
     localStorage.setItem('fithub_favorites', JSON.stringify(updatedFavs));
@@ -172,7 +183,7 @@ export const GymDetails: React.FC = () => {
       await apiFetch('/api/reviews', {
         method: 'POST',
         body: JSON.stringify({
-          gymId: id,
+          gymId: currentGymId,
           rating: ratingInput,
           comment: commentInput
         })
@@ -217,17 +228,43 @@ export const GymDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container flex-center" style={{ height: '80vh' }}>
-        <div className="skeleton-card" style={{ width: '100%', height: '500px' }}></div>
+      <div className="container" style={{ paddingTop: '90px', paddingBottom: '60px', maxWidth: '1200px' }}>
+        <div className="glass-panel skeleton-shimmer" style={{ width: '100%', height: '360px', borderRadius: '16px', marginBottom: '2rem' }}></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="glass-panel skeleton-shimmer" style={{ height: '140px', borderRadius: '12px' }}></div>
+            <div className="glass-panel skeleton-shimmer" style={{ height: '220px', borderRadius: '12px' }}></div>
+          </div>
+          <div className="glass-panel skeleton-shimmer" style={{ height: '380px', borderRadius: '12px' }}></div>
+        </div>
       </div>
     );
   }
 
   if (!gym) {
+    const isUnderReview = errorMessage?.toLowerCase().includes('verification') || errorMessage?.toLowerCase().includes('review') || errorMessage?.toLowerCase().includes('approved');
     return (
-      <div className="container text-center" style={{ padding: '5rem 0' }}>
-        <h2>Gym profile not found</h2>
-        <button onClick={() => navigate('/gyms')} className="glow-btn">Back to Directory</button>
+      <div className="container flex-center text-center" style={{ minHeight: '70vh', padding: '5rem 1.5rem' }}>
+        <div className="glass-panel" style={{ maxWidth: '520px', padding: '3rem 2rem', borderRadius: '16px', border: '1px solid rgba(0, 240, 255, 0.2)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+            {isUnderReview ? '⏳' : '🔍'}
+          </div>
+          <h2 style={{ fontSize: '1.6rem', color: '#fff', marginBottom: '0.75rem' }}>
+            {isUnderReview ? 'Gym Under Verification' : 'Gym Profile Not Found'}
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2rem' }}>
+            {isUnderReview 
+              ? 'This gym profile is currently undergoing verification by our administration team. Once verified and approved, it will be publicly accessible.' 
+              : (errorMessage || 'The gym profile you are looking for does not exist or may have been unlisted.')}
+          </p>
+          <button 
+            onClick={() => navigate('/gyms')} 
+            className="glow-btn"
+            style={{ padding: '0.75rem 2rem', fontSize: '0.95rem' }}
+          >
+            Browse Verified Gyms
+          </button>
+        </div>
       </div>
     );
   }
@@ -237,7 +274,7 @@ export const GymDetails: React.FC = () => {
       <SEO 
         title={`${gym.name} - Facilities, Membership Plans & Reviews`}
         description={`Explore ${gym.name} in ${gym.city}. View membership plans starting from ${gym.plans?.[0] ? `₹${gym.plans[0].price}` : '₹999'}, amenities, equipment photos, and member reviews on GymConnect.`}
-        canonicalPath={`/gyms/${id}`}
+        canonicalPath={`/gyms/${currentGymId}`}
       />
 
       {/* 1. COVER HERO HEADER */}

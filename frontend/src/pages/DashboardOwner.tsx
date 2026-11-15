@@ -1726,7 +1726,7 @@ export const DashboardOwner: React.FC = () => {
                       </div>
 
                       <button 
-                        onClick={() => navigate('/chat', { state: { startChatWith: conv.otherUser } })}
+                        onClick={() => navigate(`/chat?userId=${conv.otherUser.id}`, { state: { startChatWith: conv.otherUser } })}
                         className="glow-btn"
                         style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
                       >

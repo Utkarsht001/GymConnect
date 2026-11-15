@@ -117,7 +117,7 @@ io.on('connection', (socket) => {
   });
 
   // Client sends a message
-  socket.on('send_message', async ({ senderId, receiverId, content, imageUrl }) => {
+  socket.on('send_message', async ({ id, messageId, senderId, receiverId, content, imageUrl }) => {
     const effectiveSenderId = socket.user?.id || senderId;
     if (!effectiveSenderId || !receiverId || (!content && !imageUrl)) {
       socket.emit('message_error', { error: 'Sender ID, receiver ID, and content or image are required.' });
@@ -125,21 +125,56 @@ io.on('connection', (socket) => {
     }
 
     try {
-      // 1. Permanently save message to database first
-      const msg = await prisma.message.create({
-        data: {
-          senderId: effectiveSenderId,
-          receiverId,
-          content: content ? content.trim() : '',
-          imageUrl: imageUrl || null,
-          isRead: false
-        },
-        include: {
-          sender: {
-            select: { id: true, name: true, avatar: true, role: true }
+      let msg = null;
+      const targetMsgId = id || messageId;
+      if (targetMsgId) {
+        msg = await prisma.message.findUnique({
+          where: { id: targetMsgId },
+          include: {
+            sender: {
+              select: { id: true, name: true, avatar: true, role: true }
+            }
           }
+        });
+      }
+
+      if (!msg) {
+        const trimmed = content ? content.trim() : '';
+        // Deduplicate messages sent within 3 seconds
+        const recentDuplicate = await prisma.message.findFirst({
+          where: {
+            senderId: effectiveSenderId,
+            receiverId,
+            content: trimmed,
+            createdAt: { gte: new Date(Date.now() - 3000) }
+          },
+          include: {
+            sender: {
+              select: { id: true, name: true, avatar: true, role: true }
+            }
+          }
+        });
+
+        if (recentDuplicate) {
+          msg = recentDuplicate;
+        } else {
+          // Permanently save message to database first
+          msg = await prisma.message.create({
+            data: {
+              senderId: effectiveSenderId,
+              receiverId,
+              content: trimmed,
+              imageUrl: imageUrl || null,
+              isRead: false
+            },
+            include: {
+              sender: {
+                select: { id: true, name: true, avatar: true, role: true }
+              }
+            }
+          });
         }
-      });
+      }
 
       // 2. Broadcast message to receiver's room, sender's room, and conversation room
       const conversationRoom = `conv_${[effectiveSenderId, receiverId].sort().join('_')}`;

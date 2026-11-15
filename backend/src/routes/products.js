@@ -4,9 +4,25 @@ import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
+let productsCache = {
+  data: null,
+  expiresAt: 0
+};
+
+export function invalidateProductsCache() {
+  productsCache.data = null;
+  productsCache.expiresAt = 0;
+}
+
 // GET /api/products - List store products
 router.get('/', async (req, res) => {
   const { search, category, gymId } = req.query;
+
+  const isPublicDefault = !search && !category && !gymId;
+  if (isPublicDefault && productsCache.data && Date.now() < productsCache.expiresAt) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.json(productsCache.data);
+  }
 
   let where = {};
 
@@ -20,8 +36,8 @@ router.get('/', async (req, res) => {
 
   if (search) {
     where.OR = [
-      { name: { contains: search } },
-      { description: { contains: search } }
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } }
     ];
   }
 
@@ -49,6 +65,12 @@ router.get('/', async (req, res) => {
         { createdAt: 'desc' }
       ]
     });
+
+    if (isPublicDefault) {
+      productsCache.data = products;
+      productsCache.expiresAt = Date.now() + 60000; // 60s cache
+      res.setHeader('X-Cache', 'MISS');
+    }
 
     return res.json(products);
   } catch (error) {
@@ -108,6 +130,7 @@ router.post('/', verifyToken, requireRole(['GYM_OWNER']), async (req, res) => {
       }
     });
 
+    invalidateProductsCache();
     return res.status(201).json(product);
   } catch (error) {
     console.error('Create product error:', error);
@@ -148,6 +171,7 @@ router.put('/:id', verifyToken, requireRole(['GYM_OWNER']), async (req, res) => 
       }
     });
 
+    invalidateProductsCache();
     return res.json(updated);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to update product.' });
@@ -174,6 +198,7 @@ router.delete('/:id', verifyToken, requireRole(['GYM_OWNER', 'ADMIN']), async (r
     }
 
     await prisma.product.delete({ where: { id } });
+    invalidateProductsCache();
     return res.json({ message: 'Product deleted successfully.' });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to delete product.' });

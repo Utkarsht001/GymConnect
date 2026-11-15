@@ -5,9 +5,37 @@ import { verifyToken, requireRole, requireOwnerOfGym, getJwtSecret } from '../mi
 
 const router = express.Router();
 
+// High-performance in-memory cache
+const gymsCache = {
+  discovery: null,
+  discoveryExpiresAt: 0,
+  facilities: null,
+  facilitiesExpiresAt: 0,
+  gymDetails: new Map(), // gymId -> { data, expiresAt }
+};
+
+export function invalidateGymsCache(gymId = null) {
+  gymsCache.discovery = null;
+  gymsCache.discoveryExpiresAt = 0;
+  gymsCache.facilities = null;
+  gymsCache.facilitiesExpiresAt = 0;
+  if (gymId) {
+    gymsCache.gymDetails.delete(gymId);
+  } else {
+    gymsCache.gymDetails.clear();
+  }
+}
+
 // GET /api/gyms - Discovery listing with optional query filters
 router.get('/', async (req, res) => {
   const { search, city, facility, minPrice, maxPrice, rating, isApproved, status } = req.query;
+
+  // Check cache for public default discovery queries (sub-5ms response)
+  const isPublicDefault = !search && !city && !facility && !minPrice && !maxPrice && !rating && !isApproved && !status && !req.headers['authorization'];
+  if (isPublicDefault && gymsCache.discovery && Date.now() < gymsCache.discoveryExpiresAt) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.json(gymsCache.discovery);
+  }
 
   // Build prisma query options
   let where = {};
@@ -42,14 +70,14 @@ router.get('/', async (req, res) => {
   }
 
   if (city) {
-    where.city = { contains: city, lte: undefined }; // Case insensitive is tricky in SQLite, contains is default case-insensitive in SQLite
+    where.city = { contains: city, mode: 'insensitive' };
   }
 
   if (search) {
     where.OR = [
-      { name: { contains: search } },
-      { description: { contains: search } },
-      { address: { contains: search } }
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { address: { contains: search, mode: 'insensitive' } }
     ];
   }
 
@@ -72,18 +100,45 @@ router.get('/', async (req, res) => {
         { priorityOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        address: true,
+        city: true,
+        latitude: true,
+        longitude: true,
+        contactNumber: true,
+        email: true,
+        logo: true,
+        coverImage: true,
+        openingHours: true,
+        trialStartDate: true,
+        trialMonths: true,
+        isSubscriptionPaid: true,
+        isApproved: true,
+        approvalStatus: true,
+        rejectionReason: true,
+        isFeatured: true,
+        isPromoted: true,
+        priorityOrder: true,
+        createdAt: true,
         owner: {
           select: { id: true, name: true, email: true, phone: true, avatar: true, lastLoginAt: true }
         },
         facilities: {
-          include: {
-            facility: true
+          select: {
+            facility: {
+              select: { id: true, name: true, icon: true }
+            }
           }
         },
-        plans: true,
-        reviews: true,
-        photos: true,
+        plans: {
+          select: { id: true, name: true, price: true, durationDays: true }
+        },
+        reviews: {
+          select: { rating: true }
+        }
       }
     });
 
@@ -110,7 +165,7 @@ router.get('/', async (req, res) => {
     // Client-side facility filter
     if (facility) {
       filteredGyms = filteredGyms.filter(gym => 
-        gym.facilities.some(gf => gf.facility.name.toLowerCase() === facility.toString().toLowerCase())
+        gym.facilities.some(gf => gf.facility?.name?.toLowerCase() === facility.toString().toLowerCase())
       );
     }
 
@@ -118,7 +173,7 @@ router.get('/', async (req, res) => {
     if (rating) {
       const minRating = parseFloat(rating);
       filteredGyms = filteredGyms.filter(gym => {
-        if (gym.reviews.length === 0) return false;
+        if (!gym.reviews || gym.reviews.length === 0) return false;
         const avg = gym.reviews.reduce((acc, r) => acc + r.rating, 0) / gym.reviews.length;
         return avg >= minRating;
       });
@@ -130,6 +185,13 @@ router.get('/', async (req, res) => {
       if (a.priorityOrder !== b.priorityOrder) return (b.priorityOrder || 0) - (a.priorityOrder || 0);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+
+    // Cache default public discovery results for 60 seconds
+    if (isPublicDefault) {
+      gymsCache.discovery = filteredGyms;
+      gymsCache.discoveryExpiresAt = Date.now() + 60000;
+      res.setHeader('X-Cache', 'MISS');
+    }
 
     return res.json(filteredGyms);
   } catch (error) {
@@ -172,6 +234,13 @@ router.get('/admin/pending', verifyToken, requireRole(['ADMIN']), async (req, re
 // GET /api/gyms/:id - Detailed profile view
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
+
+  // Check cache for approved gyms if unauthenticated public visitor
+  const cached = gymsCache.gymDetails.get(id);
+  if (cached && Date.now() < cached.expiresAt && !req.headers['authorization']) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.json(cached.data);
+  }
 
   try {
     const gym = await prisma.gym.findUnique({
@@ -226,6 +295,11 @@ router.get('/:id', async (req, res) => {
           approvalStatus: gym.approvalStatus || 'PENDING'
         });
       }
+    }
+
+    // Cache approved profile for 60 seconds
+    if (gym.isApproved && gym.approvalStatus === 'APPROVED') {
+      gymsCache.gymDetails.set(id, { data: gym, expiresAt: Date.now() + 60000 });
     }
 
     return res.json(gym);
@@ -284,6 +358,7 @@ router.post('/', verifyToken, requireRole(['GYM_OWNER']), async (req, res) => {
     });
 
     console.log(`[GYM CREATION] Gym "${newGym.name}" registered by Owner ${req.user.id} - Status: PENDING`);
+    invalidateGymsCache();
     return res.status(201).json(newGym);
   } catch (error) {
     console.error('Create gym error:', error);
@@ -381,6 +456,7 @@ router.put('/:id/approve', verifyToken, requireRole(['ADMIN']), async (req, res)
     });
 
     console.log(`[ADMIN APPROVAL] Admin ${req.user.email} APPROVED gym: "${gym.name}" (${gym.id})`);
+    invalidateGymsCache(id);
     return res.json({ message: 'Gym listing approved successfully.', gym });
   } catch (error) {
     console.error('Approve gym error:', error);
@@ -429,6 +505,7 @@ router.put('/:id/reject', verifyToken, requireRole(['ADMIN']), async (req, res) 
     });
 
     console.log(`[ADMIN REJECTION] Admin ${req.user.email} REJECTED gym: "${gym.name}" (${gym.id}). Reason: ${rejectionReason.trim()}`);
+    invalidateGymsCache(id);
     return res.json({ message: 'Gym listing rejected with reason recorded.', gym });
   } catch (error) {
     console.error('Reject gym error:', error);
@@ -441,6 +518,7 @@ router.delete('/admin/:id', verifyToken, requireRole(['ADMIN']), async (req, res
   const { id } = req.params;
   try {
     await prisma.gym.delete({ where: { id } });
+    invalidateGymsCache(id);
     return res.json({ message: 'Gym listing deleted successfully.' });
   } catch (error) {
     console.error('Delete gym error:', error);
@@ -581,8 +659,15 @@ router.post('/:id/updates', verifyToken, requireOwnerOfGym, async (req, res) => 
 
 // GET /api/facilities - Helper endpoint to get all possible facilities
 router.get('/facilities/all', async (req, res) => {
+  if (gymsCache.facilities && Date.now() < gymsCache.facilitiesExpiresAt) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.json(gymsCache.facilities);
+  }
   try {
     const facilities = await prisma.facility.findMany();
+    gymsCache.facilities = facilities;
+    gymsCache.facilitiesExpiresAt = Date.now() + 300000; // 5 min cache
+    res.setHeader('X-Cache', 'MISS');
     return res.json(facilities);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch facilities.' });

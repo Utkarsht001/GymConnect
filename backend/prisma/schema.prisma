@@ -88,6 +88,11 @@ model Gym {
   favorites            Favorite[]
   complaints           Complaint[]
   subscriptionPayments SubscriptionPayment[]
+
+  @@index([isApproved, approvalStatus])
+  @@index([city])
+  @@index([createdAt])
+  @@index([isFeatured, priorityOrder])
 }
 
 model GymPhoto {
@@ -140,6 +145,10 @@ model Subscription {
   pricePaid      Float
   status         String         @default("ACTIVE") // "ACTIVE", "EXPIRED", "CANCELLED", "PENDING"
   createdAt      DateTime       @default(now())
+
+  @@index([customerId])
+  @@index([gymId])
+  @@index([status])
 }
 
 model GymUpdate {
@@ -169,6 +178,10 @@ model Product {
   
   cartItems   CartItem[]
   orderItems  OrderItem[]
+
+  @@index([gymId])
+  @@index([category])
+  @@index([isFeatured, isPromoted])
 }
 
 model Cart {
@@ -220,6 +233,10 @@ model Review {
   comment    String
   ownerReply String?
   createdAt  DateTime @default(now())
+
+  @@index([gymId])
+  @@index([customerId])
+  @@index([rating])
 }
 
 model Favorite {
@@ -243,6 +260,10 @@ model Message {
   isEscalated    Boolean      @default(false)
   isRead         Boolean      @default(false)
   createdAt      DateTime     @default(now())
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+  @@index([createdAt])
 }
 
 model Complaint {
@@ -266,6 +287,9 @@ model Notification {
   message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 model PlatformSetting {

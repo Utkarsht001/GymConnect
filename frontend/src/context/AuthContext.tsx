@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const API_BASE_URL = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace(/\/+$/, '') 
-      : (import.meta.env.DEV ? 'http://localhost:5000' : '');
+      : (import.meta.env.DEV ? 'http://localhost:5000' : 'https://gym-connect-8xvg.vercel.app');
     try {
       const response = await fetch(`${API_BASE_URL}${url}`, {
         ...options,

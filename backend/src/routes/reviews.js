@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../prisma.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
+import { invalidateGymsCache } from './gyms.js';
 
 const router = express.Router();
 
@@ -69,6 +70,7 @@ router.post('/', verifyToken, requireRole(['CUSTOMER']), async (req, res) => {
       });
     }
 
+    invalidateGymsCache(gymId);
     return res.status(201).json(review);
   } catch (error) {
     console.error('Create review error:', error);
@@ -119,6 +121,7 @@ router.put('/:id/reply', verifyToken, requireRole(['GYM_OWNER']), async (req, re
       }
     });
 
+    invalidateGymsCache(review.gymId);
     return res.json(updatedReview);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to reply to review.' });

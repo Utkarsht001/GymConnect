@@ -193,9 +193,16 @@ export const Chat: React.FC = () => {
           }
         }
 
-        // Clean router state
+        // Keep the URL query parameter in sync so page refresh preserves the active conversation
         if (window.history.replaceState) {
-          window.history.replaceState({}, document.title, location.pathname);
+          window.history.replaceState({}, document.title, `/chat?userId=${targetUserId}`);
+        }
+      } else if (convList.length > 0 && !activeConversationRef.current) {
+        // Automatically select the most recent conversation if none specified
+        setActiveConversation(convList[0]);
+        loadHistory(convList[0].otherUser.id);
+        if (window.history.replaceState) {
+          window.history.replaceState({}, document.title, `/chat?userId=${convList[0].otherUser.id}`);
         }
       }
     };
@@ -212,7 +219,7 @@ export const Chat: React.FC = () => {
     if (!user) return;
 
     const rawApiUrl = import.meta.env.VITE_API_URL || '';
-    const socketEndpoint = import.meta.env.VITE_SOCKET_URL || rawApiUrl || (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    const socketEndpoint = import.meta.env.VITE_SOCKET_URL || rawApiUrl || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://gym-connect-8xvg.vercel.app');
 
     const socket = io(socketEndpoint, {
       auth: { token: token || undefined },
@@ -270,7 +277,6 @@ export const Chat: React.FC = () => {
             return c;
           }).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
         } else {
-          // If conversation doesn't exist in sidebar yet, reload conversation list
           loadConversations();
           return prev;
         }
@@ -292,7 +298,7 @@ export const Chat: React.FC = () => {
     };
   }, [user, token, apiFetch, loadConversations]);
 
-  // Periodic polling fallback (every 6 seconds while conversation is open)
+  // High-frequency adaptive polling fallback (every 2.5s while conversation is open)
   useEffect(() => {
     if (!activeConversation) return;
 
@@ -311,15 +317,41 @@ export const Chat: React.FC = () => {
       } catch (e) {
         // Silently ignore polling hiccups
       }
-    }, 6000);
+    }, 2500);
 
     return () => clearInterval(interval);
   }, [activeConversation, apiFetch]);
+
+  // Periodic sidebar conversations refresh (every 5s so incoming new chats appear automatically)
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data: Conversation[] = await apiFetch('/api/messages/conversations');
+        if (Array.isArray(data)) {
+          setConversations(prev => {
+            // Check if anything meaningful changed
+            if (data.length !== prev.length) return data;
+            const hasNewMessage = data.some((c, idx) => c.lastMessageAt !== prev[idx]?.lastMessageAt || c.unreadCount !== prev[idx]?.unreadCount);
+            return hasNewMessage ? data : prev;
+          });
+        }
+      } catch (e) {
+        // Ignore background polling errors
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [user, apiFetch]);
 
   // Select conversation from sidebar
   const handleSelectConversation = (conv: Conversation) => {
     setActiveConversation(conv);
     loadHistory(conv.otherUser.id);
+    if (window.history.replaceState) {
+      window.history.replaceState({}, document.title, `/chat?userId=${conv.otherUser.id}`);
+    }
   };
 
   // Send message handler (Robust REST save + Socket broadcast)
@@ -372,9 +404,11 @@ export const Chat: React.FC = () => {
         }).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
       });
 
-      // 5. Also broadcast via socket if available
+      // 5. Broadcast via socket with messageId to prevent duplicate DB insertion
       if (socketRef.current?.connected) {
         socketRef.current.emit('send_message', {
+          id: savedMessage.id,
+          messageId: savedMessage.id,
           senderId: user.id,
           receiverId: activeConversation.otherUser.id,
           content: trimmed,
